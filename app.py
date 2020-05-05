@@ -35,7 +35,7 @@ def put_user():
 def delete_user():
     request_data = request.args.to_dict()
     if r_cli.zrem(request_data["base"], request_data["value"]):
-        return flask.redirect("/users")
+        return flask.redirect(f"/redis/display_sset?base={request_data['base']}")
     else:
         return flask.abort(400)
 
@@ -49,7 +49,7 @@ def update_user():
     #
     # if request_data["value"] in all_users:
     #     r_cli.zadd(request_data["base"], {request_data["value"]: request_data["score"]})
-    #     return flask.redirect("/users")
+    #     return flask.redirect(f"/redis/display_sset?base={request_data['base']}")
     #
     # else:
     #     return flask.abort(404)
