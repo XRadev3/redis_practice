@@ -5,3 +5,4 @@ pytest==5.4.1
 flask==1.1.1
 flask_accept==0.0.6
 utils==1.0.1
+redis==3.5.0
