@@ -28,7 +28,7 @@ def put_user():
     if r_cli.zadd(request_data["base"], {request_data["value"]: request_data["score"]}):
         return flask.redirect(f"/redis/display_sset?base={request_data['base']}")
     else:
-        return flask.abort(400)
+        return "You did not set valid data or the sorted set already exists!", 400
 
 
 @app.route("/redis/zdelete", methods=["DELETE"])
@@ -37,7 +37,7 @@ def delete_user():
     if r_cli.zrem(request_data["base"], request_data["value"]):
         return flask.redirect(f"/redis/display_sset?base={request_data['base']}")
     else:
-        return flask.abort(400)
+        return "You did not set valid data or the sorted set already exists!", 400
 
 
 @app.route("/redis/zupdate", methods=["PATCH"])
@@ -52,7 +52,7 @@ def update_user():
     #     return flask.redirect(f"/redis/display_sset?base={request_data['base']}")
     #
     # else:
-    #     return flask.abort(404)
+    #     return "You did not set valid data or the sorted set already exists!", 404
 
 
 @app.route("/redis/clear")
