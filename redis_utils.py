@@ -28,15 +28,16 @@ def remove_ordered_set(request_data):
         return False
 
 
-def get_key_from_ordered_set(request_data):
+def get_key_from_ordered_set(sorted_set, key):
     try:
-        users = r_cli.zrange(request_data["base"], 0, -1)
-        import pdb;pdb.set_trace()
-        if request_data['value'] in users:
-            return users[request_data['value']]
+        key_dict = [x.decode() for x in r_cli.zrange(sorted_set, 0, -1)]
+        if key in key_dict:
+            return {"data": key, "status": "200"}
+
+        raise ValueError('The given key does not exist in the given ordered set')
 
     except Exception as msg:
-        return False
+        return {"data": str(msg), "status": 400}
 
 
 def clear_redis():
