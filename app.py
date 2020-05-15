@@ -9,10 +9,12 @@ import config
 import flask
 import redis_utils
 
+from flask_login import LoginManager, UserMixin
 from flask import request, render_template, flash
 
 app = flask.Flask(__name__)
 app.config.from_mapping(config.app_config())
+login = LoginManager(app)
 
 
 @app.route("/index")
@@ -23,36 +25,59 @@ def index_page():
 @app.route("/login", methods=['GET', 'POST'])
 def login_form():
     form = LoginForm()
+
     title = 'Redis Login'
 
     if form.validate_on_submit():
         flash('Login requested for {}, remember me {}'.format(form.username.data, form.remember_me.data))
-
-        return flask.redirect('/index')
+        return flask.redirect('/index/home_page')
 
     return render_template('login.html', title=title, form=form)
 
 
-@app.route("/index/<user>")
+@app.route("/user/home_page")
 # @require_auth()
 def user_page():
     request_args = request.args.to_dict()
+    title = 'User Page'
     response = redis_utils.hget(request_args['hash_name'], request_args['hash_key'])
-    # import pdb;pdb.set_trace()
-    return response['data'], response['status']
+
+    return render_template("user_home.html", title=title, name=response['data'])
 
 
 @app.route("/user/put")
 # @require_auth()
 def add_user():
     request_args = request.args.to_dict()
-    response = redis_utils.hset(request_args['hash_name'], request_args['hash_key'], request_args['hash_value'])
+    temp = request_args['h_map']
+    import pdb;pdb.set_trace()
+    print("asd")
+    response = redis_utils.hset(request_args['hash_name'], temp)
 
-    if response['data'] is bool:
-        return flask.redirect(f'/index/<{request_args["hash_value"]}>'
-                              f'?hash_name={request_args["hash_name"]}'
+    if isinstance(response['data'], bool):
+        return flask.redirect(f'/index?hash_name={request_args["hash_name"]}'
                               f'&hash_key={request_args["hash_key"]}',
                               response['status'])
+
+    return response['data'], response['status']
+
+
+@app.route("/user/delete")
+def rem_user():
+    request_data = request.args.to_dict()
+    response = redis_utils.hdel(request_data['hash_name'], request_data['hash_key'])
+    if isinstance(response['data'], bool):
+        return "User was successfully deleted!", response['status']
+
+    return response['data'], response['status']
+
+
+@app.route("/user/all")
+def get_all_users():
+    request_data = request.args.to_dict()
+    response = redis_utils.hgetall(request_data['hash_name'])
+    if isinstance(response['data'], bool):
+        return response['data'], response['status']
 
     return response['data'], response['status']
 

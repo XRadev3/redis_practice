@@ -1,25 +1,19 @@
 import redis
 
-from rq import Queue
-
 r_cli = redis.StrictRedis()
-#queue = Queue(connection=r_cli.connection())
 
 
-def redis_hash_test(hash_name, hash_key, hash_value):
-    r_hash = r_cli.hget(name=hash_name, key=hash_key)
-
-    if r_hash:
-        return "Success"
-
-    return "Fail"
-
-
-def hset(hash_name, hash_key, hash_value):
+def hset(hash_name, hash_key, hash_value, multiple=False):
     msg = 'Input data is incorrect!'
+    method_to_use = r_cli.hset
+
+    if multiple:
+        # Do not use yet
+        # hash_value input type should be a dict first.
+        method_to_use = r_cli.hmset
 
     try:
-        r_hash = r_cli.hset(name=hash_name, key=hash_key, value=hash_value)
+        r_hash = method_to_use(name=hash_name, key=hash_key, value=hash_value)
         if r_hash:
             return {'data': True, 'status': 201}
 
@@ -29,7 +23,24 @@ def hset(hash_name, hash_key, hash_value):
         return {'data': msg, 'status': 400}
 
     except Exception as msg:
-            return {'data': msg, 'status': 500}
+        return {'data': msg, 'status': 500}
+
+
+def hdel(hash_name, hash_key):
+    msg = 'Input data is incorrect!'
+
+    try:
+        r_hash = r_cli.hdel(hash_name, hash_key)
+        if r_hash:
+            return {'data': True, 'status': 204}
+
+        elif r_hash == 0:
+            return {'data': msg, 'status': 400}
+
+        return {'data': msg, 'status': 400}
+
+    except Exception as msg:
+        return {'data': msg, 'status': 500}
 
 
 def hget(hash_name, hash_key):
@@ -46,7 +57,28 @@ def hget(hash_name, hash_key):
         return {'data': msg, 'status': 400}
 
     except Exception as msg:
-            return {'data': msg, 'status': 500}
+        return {'data': msg, 'status': 500}
+
+
+def hgetall(hash_name):
+    msg = 'Input data is incorrect!'
+    r_hash = dict()
+
+    try:
+        all_users = r_cli.hgetall(name=hash_name)
+        for x in all_users:
+            r_hash.update({x.decode(): all_users[x].decode()})
+
+        if all_users:
+            return {'data': r_hash, 'status': 201}
+
+        elif r_hash == 0:
+            return {'data': msg, 'status': 400}
+
+        return {'data': msg, 'status': 400}
+
+    except Exception as msg:
+        return {'data': msg, 'status': 500}
 
 
 def zrange(request_data):
