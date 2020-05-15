@@ -1,15 +1,15 @@
 #### IMPORTANT ####
 # Yes, yes i know Redis should not be used to store persistent data.
 # This program is made for the sole purpose of practicing Redis w/ python.
-from os import environ
 
-from auth import require_auth, LoginForm
+from app.auth import require_auth, LoginForm
+from app import config
 
-import config
 import flask
 import redis_utils
 
-from flask_login import LoginManager, UserMixin
+from redis_utils import redis_minion
+from flask_login import LoginManager
 from flask import request, render_template, flash
 
 app = flask.Flask(__name__)
@@ -73,13 +73,17 @@ def rem_user():
 
 
 @app.route("/user/all")
-def get_all_users():
+def hget_all():
     request_data = request.args.to_dict()
-    response = redis_utils.hgetall(request_data['hash_name'])
-    if isinstance(response['data'], bool):
-        return response['data'], response['status']
+    minion = redis_minion.RedisMinion(request_data['hash_name'])
 
-    return response['data'], response['status']
+    response_data = ['data', 'status']
+    response = minion.get_minion_data(minion.hash_name)
+
+    if isinstance(response[response_data[0]], bool):
+        return response[response_data[0]], response[response_data[1]]
+
+    return response[response_data[0]], response[response_data[1]]
 
 
 @app.route("/redis/display/s_set")
