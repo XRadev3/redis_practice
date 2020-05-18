@@ -63,11 +63,9 @@ def hget(hash_name, hash_key):
 def hgetall(hash_name):
     msg = 'Input data is incorrect!'
     r_hash = dict()
-
     try:
         all_users = r_cli.hgetall(name=hash_name)
-        for x in all_users:
-            r_hash.update({x.decode(): all_users[x].decode()})
+        r_hash = decode_bytelist(all_users, nested_to_dict=True)
 
         if all_users:
             return {'data': r_hash, 'status': 201}
@@ -79,6 +77,19 @@ def hgetall(hash_name):
 
     except Exception as msg:
         return {'data': msg, 'status': 500}
+
+
+def hget_from_all(key):
+    all_hashes = decode_bytelist(r_cli.scan(0)[1])
+    try:
+        for hash_name in all_hashes:
+            request_data = hget(hash_name, key)
+
+            if request_data['status'] == 201:
+                return request_data
+
+    except Exception as message:
+        return {'data': message, 'status': 400}
 
 
 def zrange(request_data):
@@ -117,3 +128,16 @@ def zrange_singular(sorted_set, key):
 
 def flushall():
     r_cli.flushall()
+
+
+def decode_bytelist(bytelist, nested_to_dict=False):
+    if nested_to_dict:
+        result = dict()
+
+        for x in bytelist:
+            result.update({x.decode(): bytelist[x].decode()})
+
+    else:
+        result = [x.decode() for x in bytelist]
+
+    return result

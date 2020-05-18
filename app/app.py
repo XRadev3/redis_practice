@@ -2,19 +2,18 @@
 # Yes, yes i know Redis should not be used to store persistent data.
 # This program is made for the sole purpose of practicing Redis w/ python.
 
-from app.auth import require_auth, LoginForm
-from app import config
-
 import flask
-import redis_utils
-
-from redis_utils import redis_minion
-from flask_login import LoginManager
+import flask_login
+from app import config
 from flask import request, render_template, flash
+
+from redis_utils.redis_minion import RedisMinion
+from app.auth import require_auth, LoginForm
+from redis_utils import redis_utils as redis_utils
 
 app = flask.Flask(__name__)
 app.config.from_mapping(config.app_config())
-login = LoginManager(app)
+login = flask_login.LoginManager(app)
 
 
 @app.route("/index")
@@ -50,7 +49,8 @@ def user_page():
 def add_user():
     request_args = request.args.to_dict()
     temp = request_args['h_map']
-    import pdb;pdb.set_trace()
+    import pdb;
+    pdb.set_trace()
     print("asd")
     response = redis_utils.hset(request_args['hash_name'], temp)
 
@@ -75,10 +75,8 @@ def rem_user():
 @app.route("/user/all")
 def hget_all():
     request_data = request.args.to_dict()
-    minion = redis_minion.RedisMinion(request_data['hash_name'])
-
+    response = redis_utils.hgetall(request_data['hash_name'])
     response_data = ['data', 'status']
-    response = minion.get_minion_data(minion.hash_name)
 
     if isinstance(response[response_data[0]], bool):
         return response[response_data[0]], response[response_data[1]]
