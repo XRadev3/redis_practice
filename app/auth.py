@@ -1,8 +1,5 @@
 import flask
-import redis_utils
-from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import DataRequired
+from redis_utils import redis_utils
 
 from functools import wraps
 
@@ -23,11 +20,3 @@ def require_auth():
         return decorated_function
 
     return decorator
-
-
-class LoginForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired()])
-    remember_me = BooleanField('Remember Me')
-    submit = SubmitField('Sign In')
-

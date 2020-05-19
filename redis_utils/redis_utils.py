@@ -3,17 +3,11 @@ import redis
 r_cli = redis.StrictRedis()
 
 
-def hset(hash_name, hash_key, hash_value, multiple=False):
+def hset(hash_name, hash_key, hash_map):
     msg = 'Input data is incorrect!'
-    method_to_use = r_cli.hset
-
-    if multiple:
-        # Do not use yet
-        # hash_value input type should be a dict first.
-        method_to_use = r_cli.hmset
 
     try:
-        r_hash = method_to_use(name=hash_name, key=hash_key, value=hash_value)
+        r_hash = r_cli.hset(name=hash_name, mapping={hash_key: str(hash_map)})
         if r_hash:
             return {'data': True, 'status': 201}
 
@@ -63,6 +57,7 @@ def hget(hash_name, hash_key):
 def hgetall(hash_name):
     msg = 'Input data is incorrect!'
     r_hash = dict()
+
     try:
         all_users = r_cli.hgetall(name=hash_name)
         r_hash = decode_bytelist(all_users, nested_to_dict=True)

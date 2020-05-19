@@ -3,17 +3,16 @@
 # This program is made for the sole purpose of practicing Redis w/ python.
 
 import flask
-import flask_login
 from app import config
 from flask import request, render_template, flash
 
 from redis_utils.redis_minion import RedisMinion
-from app.auth import require_auth, LoginForm
+from app.forms import *
+from app.auth import require_auth
 from redis_utils import redis_utils as redis_utils
 
 app = flask.Flask(__name__)
 app.config.from_mapping(config.app_config())
-login = flask_login.LoginManager(app)
 
 
 @app.route("/index")
@@ -24,12 +23,7 @@ def index_page():
 @app.route("/login", methods=['GET', 'POST'])
 def login_form():
     form = LoginForm()
-
     title = 'Redis Login'
-
-    if form.validate_on_submit():
-        flash('Login requested for {}, remember me {}'.format(form.username.data, form.remember_me.data))
-        return flask.redirect('/index/home_page')
 
     return render_template('login.html', title=title, form=form)
 
@@ -44,18 +38,35 @@ def user_page():
     return render_template("user_home.html", title=title, name=response['data'])
 
 
+@app.route("/user/create", methods=['GET', 'POST'])
+def create_user():
+    form = CreateUserForm()
+    title = "User creation panel."
+
+    if form.validate_on_submit():
+        user_data_dict = {
+            'email': form.email.data,
+            'password': form.password.data,
+            'group': form.group.data
+        }
+        response = redis_utils.hset(form.username.data, form.name.data, user_data_dict)
+
+        if isinstance(response['data'], bool):
+            return flask.redirect(f'/user/home_page?hash_name={form.username.data}'
+                                  f'&hash_key={form.name.data}',
+                                  response['status'])
+
+    return render_template("create_user.html", title=title, form=form)
+
+
 @app.route("/user/put")
 # @require_auth()
 def add_user():
     request_args = request.args.to_dict()
-    temp = request_args['h_map']
-    import pdb;
-    pdb.set_trace()
-    print("asd")
-    response = redis_utils.hset(request_args['hash_name'], temp)
+    response = redis_utils.hset(request_args['hash_name'], request_args['hash_key'], request_args['hash_map'])
 
     if isinstance(response['data'], bool):
-        return flask.redirect(f'/index?hash_name={request_args["hash_name"]}'
+        return flask.redirect(f'/user/home_page?hash_name={request_args["hash_name"]}'
                               f'&hash_key={request_args["hash_key"]}',
                               response['status'])
 
