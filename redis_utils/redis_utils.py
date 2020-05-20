@@ -1,6 +1,12 @@
+# This file contains all the redis functionality.
+# Most of the functions are self explanatory and do not contain comments for instructions.
+
 import redis
+import json
 
 r_cli = redis.StrictRedis()
+
+###### HASH ######
 
 
 def hset(hash_name, hash_key, hash_map):
@@ -86,6 +92,8 @@ def hget_from_all(key):
     except Exception as message:
         return {'data': message, 'status': 400}
 
+###### SETS ######
+
 
 def zrange(request_data):
     return r_cli.zrange(request_data["base"], 0, -1)
@@ -120,11 +128,16 @@ def zrange_singular(sorted_set, key):
     except ValueError as msg:
         return {"data": str(msg), "status": 400}
 
+###### OTHER ######
 
+
+# Use to flush all te redis content. WARNING! There is no data restoration after using this function.
 def flushall():
     r_cli.flushall()
 
 
+# Use to decode a list or dict of bytes.
+# If nested_to_dict bool is set the function will return a dictionary from a nested list.
 def decode_bytelist(bytelist, nested_to_dict=False):
     if nested_to_dict:
         result = dict()
@@ -136,3 +149,5 @@ def decode_bytelist(bytelist, nested_to_dict=False):
         result = [x.decode() for x in bytelist]
 
     return result
+
+
