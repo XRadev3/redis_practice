@@ -3,8 +3,12 @@
 
 import redis
 import json
+import os
 
 r_cli = redis.StrictRedis()
+admin_file = os.getcwd() + '/local_storage/administrators.txt'
+users_file = os.getcwd() + '/local_storage/users.txt'
+
 
 ###### HASH ######
 
@@ -15,6 +19,7 @@ def hset(hash_name, hash_key, hash_map):
     try:
         r_hash = r_cli.hset(name=hash_name, mapping={hash_key: str(hash_map)})
         if r_hash:
+            json_to_file({hash_name: {hash_key: hash_map}})
             return {'data': True, 'status': 201}
 
         elif r_hash == 0:
@@ -129,6 +134,45 @@ def zrange_singular(sorted_set, key):
         return {"data": str(msg), "status": 400}
 
 ###### OTHER ######
+
+
+# Writes a given json data to a file. If unsuccessful the function will return false, otherwise true.
+def json_to_file(json_data, admin=False):
+    if admin:
+        path_to_use = admin_file
+    else:
+        path_to_use = users_file
+
+    try:
+        with open(path_to_use, 'a') as output_file:
+            output_file.write("\n")
+            json.dump(json_data, output_file)
+            return True
+
+    except Exception as message:
+        return False
+
+
+# Reads a given json file to a json object.
+# If to_hash is set to true, the function will return a json data ready to be parsed to a Redis hash.
+# If unsuccessful the function will return false, otherwise the requested object.
+def json_file_to_hash(hash_name, to_hash=False):
+    files = [users_file, admin_file]
+
+    for path_to_use in files:
+        try:
+            with open(path_to_use, 'r') as input_file:
+
+                for line in input_file:
+                    if line == "\n":
+                        pass
+                    elif hash_name in line:
+                        json_data = json.loads(line)
+
+                return json_data
+
+        except Exception as message:
+            return False
 
 
 # Use to flush all te redis content. WARNING! There is no data restoration after using this function.
