@@ -100,31 +100,31 @@ def hget_from_all(key):
 ###### SETS ######
 
 
-def zrange(request_data):
-    return r_cli.zrange(request_data["base"], 0, -1)
+def zrange(set_name):
+    return r_cli.zrange(set_name, 0, -1)
 
 
-def zadd(request_data):
+def zadd(set_name, key, score):
     try:
-        user_status = r_cli.zadd(request_data["base"], {request_data["value"]: request_data["score"]})
+        user_status = r_cli.zadd(set_name, {key: score})
         return user_status
 
     except Exception as msg:
         return False
 
 
-def zrem(request_data):
+def zrem(set_name, key):
     try:
-        user_status = r_cli.zrem(request_data["base"], request_data["value"])
+        user_status = r_cli.zrem(set_name, key)
         return user_status
 
     except Exception as msg:
         return False
 
 
-def zrange_singular(sorted_set, key):
+def zrange_singular(set_name, key):
     try:
-        key_dict = [x.decode() for x in r_cli.zrange(sorted_set, 0, -1)]
+        key_dict = [x.decode() for x in r_cli.zrange(set_name, 0, -1)]
         if key in key_dict:
             return {"data": key, "status": 200}
 
@@ -132,6 +132,65 @@ def zrange_singular(sorted_set, key):
 
     except ValueError as msg:
         return {"data": str(msg), "status": 400}
+
+###### KEYS ######
+
+
+def set_key(name, value, expiration_time=None):
+    try:
+        if expiration_time:
+            r_cli.set(name=name, value=value, ex=expiration_time)
+            return True
+        else:
+            r_cli.set(name=name, value=value)
+            return True
+
+    except Exception as message:
+        return False
+
+
+def get_key(name):
+    try:
+        r_cli.get(name)
+        return True
+
+    except Exception as message:
+        return False
+
+
+def set_expiration(name, expiration_time):
+    try:
+        r_cli.expire(name, expiration_time)
+        return True
+
+    except Exception as message:
+        return False
+
+
+def get_expiration_time(name):
+    try:
+        return r_cli.ttl(name)
+
+    except Exception as message:
+        return False
+
+
+def make_persistent(name):
+    try:
+        r_cli.persist(name)
+        return True
+
+    except Exception as message:
+        return False
+
+
+def rem_key(name):
+    try:
+        r_cli.delete(name)
+        return True
+
+    except Exception as message:
+        return False
 
 ###### OTHER ######
 
@@ -193,5 +252,3 @@ def decode_bytelist(bytelist, nested_to_dict=False):
         result = [x.decode() for x in bytelist]
 
     return result
-
-
