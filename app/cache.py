@@ -3,7 +3,7 @@ This file contains all the functionality of the caching system.
 The Cache class works with Redis as a data store.
 """
 from redis_utils import redis_utils
-
+from functools import wraps
 
 class Cache:
 
@@ -128,3 +128,15 @@ class Cache:
 
         except Exception as message:
             return False
+
+    # NOT YET DONE. DO NOT USE.
+    def cached(self):
+        def decorator(view_function):
+
+            @wraps(view_function)
+            def memorize(*args, **kwargs):
+                return view_function(*args, **kwargs)
+
+            return memorize
+
+        return decorator

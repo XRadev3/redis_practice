@@ -13,13 +13,13 @@ users_file = os.getcwd() + '/local_storage/users.txt'
 ###### HASH ######
 
 
-def hset(hash_name, hash_key, hash_map):
+def hset(hash_name, hash_map):
     msg = 'Input data is incorrect!'
 
     try:
-        r_hash = r_cli.hset(name=hash_name, mapping={hash_key: str(hash_map)})
+        r_hash = r_cli.hset(name=hash_name, mapping={'attributes': str(hash_map)})
         if r_hash:
-            json_to_file({hash_name: {hash_key: hash_map}})
+            json_to_file({hash_name: {'attributes': hash_map}})
             return {'data': True, 'status': 201}
 
         elif r_hash == 0:
@@ -227,11 +227,12 @@ def json_file_to_hash(hash_name, to_hash=False):
                         pass
                     elif hash_name in line:
                         json_data = json.loads(line)
-
-                return json_data
+                        return json_data
 
         except Exception as message:
             return False
+
+    return False
 
 
 # Use to flush all te redis content. WARNING! There is no data restoration after using this function.

@@ -4,7 +4,7 @@
 
 import flask
 from app import config
-from flask import request, render_template, flash
+from flask import request, render_template, flash, session
 
 from redis_utils.redis_minion import RedisMinion
 from app.forms import *
@@ -13,6 +13,16 @@ from redis_utils import redis_utils as redis_utils
 
 app = flask.Flask(__name__)
 app.config.from_mapping(config.app_config())
+
+
+@app.route("/temp")
+def temp_call():
+    request_data = request.args.to_dict()
+    user = redis_utils.json_file_to_hash(request_data['name'])
+    if user:
+        return user
+    else:
+        flask.abort(404)
 
 
 @app.route("/index")
@@ -25,15 +35,37 @@ def login_form():
     form = LoginForm()
     title = 'Redis Login'
 
+    if form.validate_on_submit():
+        username = form.username.data
+        user = redis_utils.json_file_to_hash(username)
+
+        if user and user[username]['attributes']['password'] == form.password.data:
+            session['username'] = username
+            session['password'] = form.password.data
+            return flask.redirect(f'/user/home_page?hash_name={username}')
+
+        else:
+            flash('Invalid username or password!')
+            return flask.redirect('/login')
+
     return render_template('login.html', title=title, form=form)
 
 
+@app.route("/logout")
+@require_auth()
+def logout():
+    session.pop('username', None)
+    session.pop('password', None)
+
+    return flask.redirect('/index')
+
+
 @app.route("/user/home_page")
-# @require_auth()
+@require_auth()
 def user_page():
     request_args = request.args.to_dict()
     title = 'User Page'
-    response = redis_utils.hget(request_args['hash_name'], request_args['hash_key'])
+    response = redis_utils.hget(request_args['hash_name'], 'attributes')
 
     return render_template("user_home.html", title=title, name=response['data'])
 
@@ -45,11 +77,12 @@ def create_user():
 
     if form.validate_on_submit():
         user_data_dict = {
+            'name': form.name.data,
             'email': form.email.data,
             'password': form.password.data,
             'group': form.group.data
         }
-        response = redis_utils.hset(form.username.data, form.name.data, user_data_dict)
+        response = redis_utils.hset(form.username.data, user_data_dict)
 
         if isinstance(response['data'], bool):
             return flask.redirect(f'/user/home_page?hash_name={form.username.data}'
@@ -63,7 +96,7 @@ def create_user():
 # @require_auth()
 def add_user():
     request_args = request.args.to_dict()
-    response = redis_utils.hset(request_args['hash_name'], request_args['hash_key'], request_args['hash_map'])
+    response = redis_utils.hset(request_args['hash_name'], request_args['hash_map'])
 
     if isinstance(response['data'], bool):
         return flask.redirect(f'/user/home_page?hash_name={request_args["hash_name"]}'
@@ -127,8 +160,6 @@ def put_sset():
         response.headers.add('User', 'Hristo')
         response.status_code = 200
         # response = response.get_wsgi_response(request.environ)
-        import pdb;
-        pdb.set_trace()
         print("asdas")
         return response
     else:
@@ -141,7 +172,7 @@ def delete_sset_key():
     request_data = request.args.to_dict()
     response = flask.Response()
 
-    if redis_utils.zrem(request_data):
+    if redis_utils.zrem(request_data['base'], request_data['key']):
         response.status_code = 200
         response.headers = request.headers
 
