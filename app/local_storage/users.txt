@@ -1,4 +1,2 @@
 
-{"nikitogx": {"Nikolai Kolibarov": {"email": "nikito@email.com", "password": "123456", "group": "samsumsigrupa"}}}
-{"tokera96": {"Todor Staikov": {"email": "tokera@mail.com", "password": "123456", "group": "notinagroup"}}}
 {"icaka": {"attributes": {"name": "hristo hristov", "email": "asdfads@mail.asdf", "password": "123456", "group": "purva"}}}

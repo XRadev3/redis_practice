@@ -4,6 +4,10 @@ The Cache class works with Redis as a data store.
 """
 from redis_utils import redis_utils
 from functools import wraps
+from flask import session
+
+user_hash_key = 'attributes'
+
 
 class Cache:
 
@@ -14,9 +18,9 @@ class Cache:
         NOTE: while the cache is empty, this ordered_set is not defined.
         """
         if default_expiration:
-            self.default_expiration = default_expiration
+            self.default_expiration = default_expiration  # *60
         else:
-            self.default_expiration = 120
+            self.default_expiration = 60  # *60
         self.name = name
 
     def get_cache(self):
@@ -65,8 +69,8 @@ class Cache:
             time_to_set = self.default_expiration
 
         try:
-            redis_utils.set_expiration(key_name, time_to_set)
-            return True
+            status = redis_utils.set_expiration(key_name, time_to_set)
+            return status
 
         except Exception as message:
             return False
@@ -94,21 +98,36 @@ class Cache:
         This function makes a key persistent. In other words, removes its expiration time.
         """
         try:
-            redis_utils.make_persistent(key_name)
-            return True
+            status = redis_utils.make_persistent(key_name)
+            return status
 
         except Exception as message:
             return False
 
     def rem_key(self, key_name):
         """
-        This function deletes a key from the cache.
+        This function deletes a key and it's instance in the ordered set as well as the hash data.
         """
         try:
             redis_utils.zrem(self.name, key_name)
             redis_utils.rem_key(key_name)
+            redis_utils.hdel(key_name, user_hash_key)
 
             return True
+
+        except Exception as message:
+            return False
+
+    def set_hash(self, hash_name):
+        """
+        This function reads the user data from the storage by its hash_name.
+        If successful it will create a Redis hash object that will hold the read data.
+        If unsuccessful it will return False.
+        """
+        try:
+            hash_data = redis_utils.json_file_to_hash(hash_name)
+            status = redis_utils.hset(hash_name, hash_data[hash_name][user_hash_key])
+            return status
 
         except Exception as message:
             return False
@@ -123,6 +142,7 @@ class Cache:
             for key_name in cache:
                 redis_utils.zrem(self.name, key_name)
                 redis_utils.rem_key(key_name)
+                redis_utils.hdel(key_name, user_hash_key)
 
             return True
 
@@ -130,13 +150,32 @@ class Cache:
             return False
 
     # NOT YET DONE. DO NOT USE.
-    def cached(self):
+    def cached(self, pop=False, push=False):
         def decorator(view_function):
+            username = session['username']
+
+            def release(*args, **kwargs):
+                status = self.rem_key(username)
+                return status
+
+            def memorize(*args, **kwargs):
+                score_to_set = redis_utils.get_set_details(self.name) + 1
+                self.set_expiration_key(username)
+                self.set_os(username, score_to_set)
+                self.set_hash(username)
+
+                return True
+
+            def update(*args, **kwargs):
+                return False
+
+            def Eviction():
+                return False
 
             @wraps(view_function)
-            def memorize(*args, **kwargs):
+            def inner(*args, **kwargs):
                 return view_function(*args, **kwargs)
 
-            return memorize
+            return inner
 
         return decorator

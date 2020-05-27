@@ -6,7 +6,6 @@ import json
 import os
 
 r_cli = redis.StrictRedis()
-admin_file = os.getcwd() + '/local_storage/administrators.txt'
 users_file = os.getcwd() + '/local_storage/users.txt'
 
 
@@ -19,7 +18,7 @@ def hset(hash_name, hash_map):
     try:
         r_hash = r_cli.hset(name=hash_name, mapping={'attributes': str(hash_map)})
         if r_hash:
-            json_to_file({hash_name: {'attributes': hash_map}})
+            # json_to_file({hash_name: {'attributes': hash_map}})
             return {'data': True, 'status': 201}
 
         elif r_hash == 0:
@@ -100,8 +99,46 @@ def hget_from_all(key):
 ###### SETS ######
 
 
+def get_set_details(set_name, key=False):
+    try:
+        if not key:
+            size = r_cli.zcard(set_name)
+            return size
+
+        else:
+            score = r_cli.zscore(set_name, key)
+            return score
+
+    except Exception as message:
+        return False
+
+
+def zincrement(set_name, key_name, decrement_higher=False):
+    try:
+        all_items = zrange_by_score(set_name)
+
+
+
+    except Exception as message:
+        return False
+
+
+def zrange_by_score(set_name):
+    try:
+        size = get_set_details(set_name)
+        all_items_by_score = r_cli.zrangebyscore(set_name, 0, size)
+        return all_items_by_score
+
+    except Exception as message:
+        return False
+
+
 def zrange(set_name):
-    return r_cli.zrange(set_name, 0, -1)
+    try:
+        return r_cli.zrange(set_name, 0, -1)
+
+    except Exception as message:
+        return False
 
 
 def zadd(set_name, key, score):
@@ -197,13 +234,8 @@ def rem_key(name):
 
 # Writes a given json data to a file. If unsuccessful the function will return false, otherwise true.
 def json_to_file(json_data, admin=False):
-    if admin:
-        path_to_use = admin_file
-    else:
-        path_to_use = users_file
-
     try:
-        with open(path_to_use, 'a') as output_file:
+        with open(users_file, 'a') as output_file:
             output_file.write("\n")
             json.dump(json_data, output_file)
             return True
@@ -216,21 +248,20 @@ def json_to_file(json_data, admin=False):
 # If to_hash is set to true, the function will return a json data ready to be parsed to a Redis hash.
 # If unsuccessful the function will return false, otherwise the requested object.
 def json_file_to_hash(hash_name, to_hash=False):
-    files = [users_file, admin_file]
 
-    for path_to_use in files:
-        try:
-            with open(path_to_use, 'r') as input_file:
+    try:
+        with open(users_file, 'r') as input_file:
 
-                for line in input_file:
-                    if line == "\n":
-                        pass
-                    elif hash_name in line:
-                        json_data = json.loads(line)
-                        return json_data
+            for line in input_file:
+                if line == "\n":
+                    pass
+                elif hash_name in line:
+                    import pdb;pdb.set_trace()
+                    json_data = json.loads(line)
+                    return json_data
 
-        except Exception as message:
-            return False
+    except Exception as message:
+        return False
 
     return False
 
