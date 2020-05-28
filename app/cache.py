@@ -149,27 +149,59 @@ class Cache:
         except Exception as message:
             return False
 
-    # NOT YET DONE. DO NOT USE.
-    def cached(self, pop=False, push=False):
+    def cached(self):
+        def decorator(view_function):
+            _username = None
+            try:
+                _username = session['username']
+            except Exception as message:
+                pass
+
+            def release():
+                status = self.rem_key(_username)
+                return status
+
+            def memorize(user_name):
+                try:
+                    score_to_set = redis_utils.get_set_details(self.name) + 1
+                    self.set_expiration_key(user_name)
+                    self.set_os(user_name, score_to_set)
+                    self.set_hash(user_name)
+
+                    return True
+
+                except Exception as message:
+                    return False
+
+            @wraps(view_function)
+            def inner(*args, **kwargs):
+                import pdb;pdb.set_trace()
+
+                if _username:
+                    release()
+                    return view_function(*args, **kwargs)
+
+                else:
+                    view_function(*args, **kwargs)
+                    username = session['username']
+                    memorize(username)
+
+            return inner
+
+        return decorator
+
+    def cached_item(self):
         def decorator(view_function):
             username = session['username']
 
-            def release(*args, **kwargs):
-                status = self.rem_key(username)
-                return status
-
-            def memorize(*args, **kwargs):
-                score_to_set = redis_utils.get_set_details(self.name) + 1
-                self.set_expiration_key(username)
-                self.set_os(username, score_to_set)
-                self.set_hash(username)
-
-                return True
-
-            def update(*args, **kwargs):
+            def is_updated():
                 return False
 
-            def Eviction():
+            def is_hit():
+                status = redis_utils.zincrby_to_highest(self.name, username, decrement_higher=True)
+                return status
+
+            def evict():
                 return False
 
             @wraps(view_function)

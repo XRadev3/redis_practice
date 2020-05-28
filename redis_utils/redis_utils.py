@@ -113,11 +113,22 @@ def get_set_details(set_name, key=False):
         return False
 
 
-def zincrement(set_name, key_name, decrement_higher=False):
+def zincrby_to_highest(set_name, key, decrement_higher=False):
     try:
         all_items = zrange_by_score(set_name)
+        if key not in all_items:
+            return False
 
+        item_index = all_items.index(key)
+        key_score = zscore(set_name, key)
+        score_to_incr = len(all_items) - key_score
 
+        if decrement_higher:
+            for i in range(item_index + 1, len(all_items)):
+                r_cli.zincrby(set_name, -1, all_items[i])
+
+        r_cli.zincrby(set_name, score_to_incr, key)
+        return True
 
     except Exception as message:
         return False
@@ -127,7 +138,15 @@ def zrange_by_score(set_name):
     try:
         size = get_set_details(set_name)
         all_items_by_score = r_cli.zrangebyscore(set_name, 0, size)
-        return all_items_by_score
+        return decode_bytelist(all_items_by_score)
+
+    except Exception as message:
+        return False
+
+
+def zscore(set_name, key):
+    try:
+        return r_cli.zscore(set_name, key)
 
     except Exception as message:
         return False
@@ -256,7 +275,6 @@ def json_file_to_hash(hash_name, to_hash=False):
                 if line == "\n":
                     pass
                 elif hash_name in line:
-                    import pdb;pdb.set_trace()
                     json_data = json.loads(line)
                     return json_data
 
@@ -284,3 +302,4 @@ def decode_bytelist(bytelist, nested_to_dict=False):
         result = [x.decode() for x in bytelist]
 
     return result
+

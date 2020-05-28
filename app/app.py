@@ -6,21 +6,25 @@ import flask
 from app import config
 from flask import request, render_template, flash, session
 
-from redis_utils.redis_minion import RedisMinion
+from app.cache import Cache
 from app.forms import *
 from app.auth import require_auth
 from redis_utils import redis_utils as redis_utils
 
 app = flask.Flask(__name__)
 app.config.from_mapping(config.app_config())
+cache = Cache()
 
 
 @app.route("/temp")
+@require_auth()
 def temp_call():
     request_data = request.args.to_dict()
     user = redis_utils.json_file_to_hash(request_data['name'])
+
     if user:
-        return user
+        user_data = redis_utils.hset(session['username'], user[session['username']]['attributes'])
+        return True
     else:
         flask.abort(404)
 
@@ -53,6 +57,7 @@ def login_form():
 
 @app.route("/logout")
 @require_auth()
+@cache.cached()
 def logout():
     session.pop('username', None)
     session.pop('password', None)
@@ -62,11 +67,13 @@ def logout():
 
 @app.route("/user/home_page")
 @require_auth()
+@cache.cached()
 def user_page():
     request_args = request.args.to_dict()
     title = 'User Page'
     response = redis_utils.hget(request_args['hash_name'], 'attributes')
-
+    import pdb;pdb.set_trace()
+    print('hi')
     return render_template("user_home.html", title=title, name=response['data'])
 
 
