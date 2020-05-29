@@ -39,6 +39,14 @@ def login_form():
     form = LoginForm()
     title = 'Redis Login'
 
+    try:
+        if session['username']:
+            flash('You are already logged in')
+            return flask.redirect(f"/user/home_page?hash_name={session['username']}")
+
+    except Exception as message:
+        pass
+
     if form.validate_on_submit():
         username = form.username.data
         user = redis_utils.json_file_to_hash(username)
@@ -46,7 +54,13 @@ def login_form():
         if user and user[username]['attributes']['password'] == form.password.data:
             session['username'] = username
             session['password'] = form.password.data
-            return flask.redirect(f'/user/home_page?hash_name={username}')
+
+            @cache.memorize()
+            def call_cache():
+                flash('You were successfully logged in')
+                return flask.redirect(f'/user/home_page?hash_name={username}')
+
+            return call_cache()
 
         else:
             flash('Invalid username or password!')
@@ -57,24 +71,35 @@ def login_form():
 
 @app.route("/logout")
 @require_auth()
-@cache.cached()
+@cache.release()
 def logout():
-    session.pop('username', None)
-    session.pop('password', None)
-
     return flask.redirect('/index')
 
 
-@app.route("/user/home_page")
-@require_auth()
-@cache.cached()
-def user_page():
-    request_args = request.args.to_dict()
-    title = 'User Page'
-    response = redis_utils.hget(request_args['hash_name'], 'attributes')
-    import pdb;pdb.set_trace()
-    print('hi')
-    return render_template("user_home.html", title=title, name=response['data'])
+@app.route("/register", methods=['GET', 'POST'])
+def register():
+    form = RegisterForm()
+    title = "Register"
+
+    if form.validate_on_submit():
+        user_data_dict = {
+            'name': form.name.data,
+            'email': form.email.data,
+            'password': form.password.data,
+            'group': 'basic'
+        }
+
+        if redis_utils.json_file_to_hash(form.username.data):
+            flask.flash("This username already exits!")
+            return render_template("register.html", title=title, form=form)
+
+        status = redis_utils.json_to_file({form.username.data: {'attributes': user_data_dict}})
+
+        if status:
+            flask.flash("Successfully registered!")
+            return flask.redirect('/login', 201)
+
+    return render_template("register.html", title=title, form=form)
 
 
 @app.route("/user/create", methods=['GET', 'POST'])
@@ -89,104 +114,26 @@ def create_user():
             'password': form.password.data,
             'group': form.group.data
         }
-        response = redis_utils.hset(form.username.data, user_data_dict)
+        status = redis_utils.json_to_file({form.username.data: {'attributes': user_data_dict}})
 
-        if isinstance(response['data'], bool):
+        if status:
             return flask.redirect(f'/user/home_page?hash_name={form.username.data}'
                                   f'&hash_key={form.name.data}',
-                                  response['status'])
+                                  201)
 
     return render_template("create_user.html", title=title, form=form)
 
 
-@app.route("/user/put")
-# @require_auth()
-def add_user():
+@app.route("/user/home_page")
+@require_auth()
+def user_page():
     request_args = request.args.to_dict()
-    response = redis_utils.hset(request_args['hash_name'], request_args['hash_map'])
+    title = 'User Page'
+    response = redis_utils.hget(request_args['hash_name'], 'attributes')
+    response['data'] = eval(response['data'])
+    del response['data']['password']
 
-    if isinstance(response['data'], bool):
-        return flask.redirect(f'/user/home_page?hash_name={request_args["hash_name"]}'
-                              f'&hash_key={request_args["hash_key"]}',
-                              response['status'])
-
-    return response['data'], response['status']
-
-
-@app.route("/user/delete")
-def rem_user():
-    request_data = request.args.to_dict()
-    response = redis_utils.hdel(request_data['hash_name'], request_data['hash_key'])
-    if isinstance(response['data'], bool):
-        return "User was successfully deleted!", response['status']
-
-    return response['data'], response['status']
-
-
-@app.route("/user/all")
-def hget_all():
-    request_data = request.args.to_dict()
-    response = redis_utils.hgetall(request_data['hash_name'])
-    response_data = ['data', 'status']
-
-    if isinstance(response[response_data[0]], bool):
-        return response[response_data[0]], response[response_data[1]]
-
-    return response[response_data[0]], response[response_data[1]]
-
-
-@app.route("/redis/display/s_set")
-@require_auth()
-def display_sset():
-    request_data = request.args.to_dict()
-    return str(redis_utils.zrange(request_data))
-
-
-@app.route("/redis/display/s_set/key")
-def display_sset_key():
-    request_data = request.args.to_dict()
-    response = flask.Response()
-    key = request_data['key']
-    sorted_set = request_data['base']
-
-    response_data = redis_utils.zrange_singular(sorted_set, key)
-    response.data = response_data['data']
-    response.status_code = response_data['status']
-
-    return response
-
-
-@app.route("/redis/zput", methods=["PUT"])
-@require_auth()
-def put_sset():
-    request_data = request.args.to_dict()
-
-    if request_data:  # redis_utils.add_ordered_set(request_data):
-        value = "key"
-        response = flask.redirect("/redis/display/s_set?base=users")
-        response.headers.add('User', 'Hristo')
-        response.status_code = 200
-        # response = response.get_wsgi_response(request.environ)
-        print("asdas")
-        return response
-    else:
-        return "You did not set valid data or the sorted set already exists!", 400
-
-
-@app.route("/redis/zdelete", methods=["DELETE"])
-@require_auth()
-def delete_sset_key():
-    request_data = request.args.to_dict()
-    response = flask.Response()
-
-    if redis_utils.zrem(request_data['base'], request_data['key']):
-        response.status_code = 200
-        response.headers = request.headers
-
-        return flask.redirect(f"/redis/display/s_set?base={request_data['base']}", code=200, Response=response)
-
-    else:
-        return "You did not set valid data or the sorted set already exists!", 400
+    return render_template("user_home.html", title=title, name=str(response['data']))
 
 
 @app.route("/redis/clear")

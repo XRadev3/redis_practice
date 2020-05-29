@@ -4,7 +4,7 @@ The Cache class works with Redis as a data store.
 """
 from redis_utils import redis_utils
 from functools import wraps
-from flask import session
+from flask import session, abort
 
 user_hash_key = 'attributes'
 
@@ -149,65 +149,100 @@ class Cache:
         except Exception as message:
             return False
 
-    def cached(self):
+    def release(self):
         def decorator(view_function):
-            _username = None
-            try:
-                _username = session['username']
-            except Exception as message:
-                pass
 
-            def release():
-                status = self.rem_key(_username)
-                return status
+            @wraps(view_function)
+            def inner(*args, **kwargs):
+                status = self.rem_key(session['username'])
+                if status:
+                    session.pop('username', None)
+                    session.pop('password', None)
+                else:
+                    abort(404)
 
-            def memorize(user_name):
+                return view_function(*args, **kwargs)
+            return inner
+        return decorator
+
+    def memorize(self):
+        def decoratior(view_function):
+
+            @wraps(view_function)
+            def inner(*args, **kwargs):
+                username = session['username']
                 try:
                     score_to_set = redis_utils.get_set_details(self.name) + 1
-                    self.set_expiration_key(user_name)
-                    self.set_os(user_name, score_to_set)
-                    self.set_hash(user_name)
+                    self.set_expiration_key(username)
+                    self.set_os(username, score_to_set)
+                    self.set_hash(username)
 
-                    return True
-
-                except Exception as message:
-                    return False
-
-            @wraps(view_function)
-            def inner(*args, **kwargs):
-                import pdb;pdb.set_trace()
-
-                if _username:
-                    release()
                     return view_function(*args, **kwargs)
 
-                else:
-                    view_function(*args, **kwargs)
-                    username = session['username']
-                    memorize(username)
+                except Exception as message:
+                    abort(404)
 
             return inner
+        return decoratior
 
-        return decorator
+    # def cached_item(self):
+    #     def decorator(view_function):
+    #         username = session['username']
+    #
+    #         def is_updated():
+    #             return False
+    #
+    #         def is_hit():
+    #             status = redis_utils.zincrby_to_highest(self.name, username, decrement_higher=True)
+    #             return status
+    #
+    #         def evict():
+    #             return False
+    #
+    #         @wraps(view_function)
+    #         def inner(*args, **kwargs):
+    #             return view_function(*args, **kwargs)
+    #
+    #         return inner
+    #
+    #     return decorator
 
-    def cached_item(self):
-        def decorator(view_function):
-            username = session['username']
-
-            def is_updated():
-                return False
-
-            def is_hit():
-                status = redis_utils.zincrby_to_highest(self.name, username, decrement_higher=True)
-                return status
-
-            def evict():
-                return False
-
-            @wraps(view_function)
-            def inner(*args, **kwargs):
-                return view_function(*args, **kwargs)
-
-            return inner
-
-        return decorator
+    # def cached(self):
+    #     def decorator(view_function):
+    #         _username = None
+    #         try:
+    #             _username = session['username']
+    #         except Exception as message:
+    #             pass
+    #
+    #         def release():
+    #             status = self.rem_key(_username)
+    #             return status
+    #
+    #         def memorize(user_name):
+    #             try:
+    #                 score_to_set = redis_utils.get_set_details(self.name) + 1
+    #                 self.set_expiration_key(user_name)
+    #                 self.set_os(user_name, score_to_set)
+    #                 self.set_hash(user_name)
+    #
+    #                 return True
+    #
+    #             except Exception as message:
+    #                 return False
+    #
+    #         @wraps(view_function)
+    #         def inner(*args, **kwargs):
+    #
+    #             if _username:
+    #                 release()
+    #                 return view_function(*args, **kwargs)
+    #
+    #             else:
+    #                 view_function(*args, **kwargs)
+    #                 username = session['username']
+    #                 memorize(username)
+    #
+    #         return inner
+    #
+    #     return decorator
