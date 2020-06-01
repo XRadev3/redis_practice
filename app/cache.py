@@ -2,9 +2,11 @@
 This file contains all the functionality of the caching system.
 The Cache class works with Redis as a data store.
 """
+import random
 from redis_utils import redis_utils
 from functools import wraps
 from flask import session, abort
+
 
 user_hash_key = 'attributes'
 
@@ -17,11 +19,13 @@ class Cache:
         name: the name of the Redis ordered_set used by the cache.
         NOTE: while the cache is empty, this ordered_set is not defined.
         """
+        self.name = name
+        self.active_users = 0
+
         if default_expiration:
             self.default_expiration = default_expiration  # *60
         else:
             self.default_expiration = 60  # *60
-        self.name = name
 
     def get_cache(self):
         """
@@ -52,14 +56,15 @@ class Cache:
         """
         try:
             redis_utils.zadd(self.name, key_name, score)
+            redis_utils.zrange(self.name)
             return True
 
         except Exception as message:
             return False
 
-    def set_expiration_key(self, key_name, expiration_time=None):
+    def set_expiration_key(self, key_value, expiration_time=None):
         """
-        This function sets a key with expiration time.
+        This function sets a key with expiration time. The key name is default to "userN" is a rand number.
         By default the expiration time will be set to 15 min.
         This represents a hash objects containing all the user data.
         """
@@ -69,8 +74,10 @@ class Cache:
             time_to_set = self.default_expiration
 
         try:
-            status = redis_utils.set_expiration(key_name, time_to_set)
-            return status
+            random.seed(random.randint(0, 100))
+            number = random.randrange(111111111, 9999999999)
+            redis_utils.set_key("user" + str(number), key_value, time_to_set)
+            return True
 
         except Exception as message:
             return False
@@ -154,6 +161,7 @@ class Cache:
 
             @wraps(view_function)
             def inner(*args, **kwargs):
+                self.active_users -= 1
                 status = self.rem_key(session['username'])
                 if status:
                     session.pop('username', None)
@@ -176,6 +184,7 @@ class Cache:
                     self.set_expiration_key(username)
                     self.set_os(username, score_to_set)
                     self.set_hash(username)
+                    self.active_users += 1
 
                     return view_function(*args, **kwargs)
 
@@ -185,64 +194,4 @@ class Cache:
             return inner
         return decoratior
 
-    # def cached_item(self):
-    #     def decorator(view_function):
-    #         username = session['username']
-    #
-    #         def is_updated():
-    #             return False
-    #
-    #         def is_hit():
-    #             status = redis_utils.zincrby_to_highest(self.name, username, decrement_higher=True)
-    #             return status
-    #
-    #         def evict():
-    #             return False
-    #
-    #         @wraps(view_function)
-    #         def inner(*args, **kwargs):
-    #             return view_function(*args, **kwargs)
-    #
-    #         return inner
-    #
-    #     return decorator
 
-    # def cached(self):
-    #     def decorator(view_function):
-    #         _username = None
-    #         try:
-    #             _username = session['username']
-    #         except Exception as message:
-    #             pass
-    #
-    #         def release():
-    #             status = self.rem_key(_username)
-    #             return status
-    #
-    #         def memorize(user_name):
-    #             try:
-    #                 score_to_set = redis_utils.get_set_details(self.name) + 1
-    #                 self.set_expiration_key(user_name)
-    #                 self.set_os(user_name, score_to_set)
-    #                 self.set_hash(user_name)
-    #
-    #                 return True
-    #
-    #             except Exception as message:
-    #                 return False
-    #
-    #         @wraps(view_function)
-    #         def inner(*args, **kwargs):
-    #
-    #             if _username:
-    #                 release()
-    #                 return view_function(*args, **kwargs)
-    #
-    #             else:
-    #                 view_function(*args, **kwargs)
-    #                 username = session['username']
-    #                 memorize(username)
-    #
-    #         return inner
-    #
-    #     return decorator

@@ -3,6 +3,8 @@
 # This program is made for the sole purpose of practicing Redis w/ python.
 
 import flask
+import time # REMOVE THIS
+from threading import Timer
 from app import config
 from flask import request, render_template, flash, session
 
@@ -17,17 +19,9 @@ cache = Cache()
 
 
 @app.route("/temp")
-@require_auth()
+#@require_auth()
 def temp_call():
-    request_data = request.args.to_dict()
-    user = redis_utils.json_file_to_hash(request_data['name'])
-
-    if user:
-        user_data = redis_utils.hset(session['username'], user[session['username']]['attributes'])
-        return True
-    else:
-        flask.abort(404)
-
+    return cache.active_users
 
 @app.route("/index")
 def index_page():
