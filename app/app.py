@@ -138,4 +138,11 @@ def clear_redis():
 
 
 if "__name__" == "__main__":
-    app.run()
+    try:
+        app.run()
+
+    except Exception as message:
+        pass
+
+    finally:
+        print('HI')

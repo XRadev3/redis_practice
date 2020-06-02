@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin python3
 
 import redis
 
@@ -19,4 +19,4 @@ for key in all_keys_in_set:
     if key not in all_key_values:
         redis_client.zrem(set_name, key)
         redis_client.hdel(key.decode(), hash_field)
-
+        print("Task finished successfully!")
