@@ -3,25 +3,26 @@
 # This program is made for the sole purpose of practicing Redis w/ python.
 
 import flask
-import time # REMOVE THIS
-from threading import Timer
-from app import config
-from flask import request, render_template, flash, session
 
+from app import config
+import app.cron_jobs as cron
 from app.cache import Cache
 from app.forms import *
 from app.auth import require_auth
 from redis_utils import redis_utils as redis_utils
+from flask import request, render_template, flash, session
 
 app = flask.Flask(__name__)
 app.config.from_mapping(config.app_config())
 cache = Cache()
+cron.job_clean_cache()
 
 
 @app.route("/temp")
-#@require_auth()
+@cache.evict()
 def temp_call():
-    return cache.active_users
+    return "op"
+
 
 @app.route("/index")
 def index_page():
@@ -32,10 +33,8 @@ def index_page():
 def login_form():
     form = LoginForm()
     title = 'Redis Login'
-
     try:
         if session['username']:
-            flash('You are already logged in')
             return flask.redirect(f"/user/home_page?hash_name={session['username']}")
 
     except Exception as message:
@@ -47,11 +46,9 @@ def login_form():
 
         if user and user[username]['attributes']['password'] == form.password.data:
             session['username'] = username
-            session['password'] = form.password.data
 
             @cache.memorize()
             def call_cache():
-                flash('You were successfully logged in')
                 return flask.redirect(f'/user/home_page?hash_name={username}')
 
             return call_cache()
@@ -120,29 +117,20 @@ def create_user():
 
 @app.route("/user/home_page")
 @require_auth()
+@cache.is_hit()
 def user_page():
     request_args = request.args.to_dict()
     title = 'User Page'
     response = redis_utils.hget(request_args['hash_name'], 'attributes')
-    response['data'] = eval(response['data'])
-    del response['data']['password']
 
     return render_template("user_home.html", title=title, name=str(response['data']))
 
 
 @app.route("/redis/clear")
-@require_auth()
+#   @require_auth()
 def clear_redis():
     redis_utils.flushall()
+    cron.cron_stop_job()
+
     return "Memory has been cleared! \n All temporary data is removed!"
 
-
-if "__name__" == "__main__":
-    try:
-        app.run()
-
-    except Exception as message:
-        pass
-
-    finally:
-        print('HI')

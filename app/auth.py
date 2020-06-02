@@ -9,11 +9,14 @@ def require_auth():
         @wraps(view_function)
         def decorated_function(*args, **kwargs):
             try:
-                if redis_utils.hgetall(session['username']):
+                key_name = 'user' + session['username']
+                if redis_utils.get_key(key_name):
                     return view_function(*args, **kwargs)
 
                 else:
-                    flask.abort(401)
+                    if session['username']:
+                        session.pop('username', None)
+                        flask.abort(401)
 
             except Exception as message:
                 flask.abort(401)

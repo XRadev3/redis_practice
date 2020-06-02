@@ -6,6 +6,7 @@ set_name = "cache"
 key_pattern = "k*"
 hash_field = "attributes"
 
+
 redis_client = redis.StrictRedis()
 all_keys_in_set = redis_client.zrange(set_name, 0, -1)
 all_keys = redis_client.keys(key_pattern)
@@ -20,3 +21,4 @@ for key in all_keys_in_set:
         redis_client.zrem(set_name, key)
         redis_client.hdel(key.decode(), hash_field)
         print("Task finished successfully!")
+

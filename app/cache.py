@@ -13,19 +13,14 @@ user_hash_key = 'attributes'
 
 class Cache:
 
-    def __init__(self, default_expiration=None, name='cache'):
+    def __init__(self, default_expiration=180, name='cache'):
         """
         default_expiration: the default expiration time of a key in cache in minutes.
         name: the name of the Redis ordered_set used by the cache.
         NOTE: while the cache is empty, this ordered_set is not defined.
         """
         self.name = name
-        self.active_users = 0
-
-        if default_expiration:
-            self.default_expiration = default_expiration  # *60
-        else:
-            self.default_expiration = 60  # *60
+        self.default_expiration = default_expiration
 
     def get_cache(self):
         """
@@ -74,9 +69,7 @@ class Cache:
             time_to_set = self.default_expiration
 
         try:
-            random.seed(random.randint(0, 100))
-            number = random.randrange(111111111, 9999999999)
-            redis_utils.set_key("user" + str(number), key_value, time_to_set)
+            redis_utils.set_key("user" + session['username'], key_value, time_to_set)
             return True
 
         except Exception as message:
@@ -161,11 +154,9 @@ class Cache:
 
             @wraps(view_function)
             def inner(*args, **kwargs):
-                self.active_users -= 1
-                status = self.rem_key(session['username'])
+                status = self.rem_key('user' + session['username'])
                 if status:
                     session.pop('username', None)
-                    session.pop('password', None)
                 else:
                     abort(404)
 
@@ -184,7 +175,6 @@ class Cache:
                     self.set_expiration_key(username)
                     self.set_os(username, score_to_set)
                     self.set_hash(username)
-                    self.active_users += 1
 
                     return view_function(*args, **kwargs)
 
@@ -194,4 +184,40 @@ class Cache:
             return inner
         return decoratior
 
+    def is_hit(self):
 
+        def decorator(view_function):
+            @wraps(view_function)
+            def inner(*args, **kwargs):
+                try:
+                    if session['username']:
+                        key_name = 'user' + session['username']
+                        redis_utils.set_expiration(key_name, self.default_expiration)
+                        redis_utils.zincrby_to_highest(self.name, key_name, True)
+
+                    return view_function(*args, **kwargs)
+
+                except Exception as message:
+                    return view_function(*args, **kwargs)
+
+            return inner
+
+        return decorator
+
+    def evict(self):
+        redis_info = redis_utils.get_redis_info()
+        current_memory_usage = redis_info['used_memory']
+        limit = redis_info['maxmemory_human'] * 1000
+        print(limit)
+
+        def decorator(view_function):
+            @wraps(view_function)
+            def inner(*args, **kwargs):
+                if current_memory_usage > limit:
+                    self.release()
+                        
+                return view_function(*args, **kwargs)
+
+            return inner
+
+        return decorator

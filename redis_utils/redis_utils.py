@@ -207,8 +207,10 @@ def set_key(name, value, expiration_time=None):
 
 def get_key(name):
     try:
-        r_cli.get(name)
-        return True
+        if r_cli.get(name):
+            return True
+
+        return False
 
     except Exception as message:
         return False
@@ -251,6 +253,25 @@ def rem_key(name):
 ###### OTHER ######
 
 
+def get_redis_info(single_value=False):
+    """
+    Return the current redis configuration.
+    single_value -> string
+    if set it will return only a single line from the configuration file.
+    """
+    try:
+        if single_value:
+            info = r_cli.info(single_value)
+
+            return info
+
+        info = r_cli.info()
+        return info
+
+    except Exception as message:
+        return False
+
+
 # Writes a given json data to a file. If unsuccessful the function will return false, otherwise true.
 def json_to_file(json_data, admin=False):
     try:
@@ -287,6 +308,7 @@ def json_file_to_hash(hash_name, to_hash=False):
 # Use to flush all te redis content. WARNING! There is no data restoration after using this function.
 def flushall():
     r_cli.flushall()
+
 
 
 # Use to decode a list or dict of bytes.
