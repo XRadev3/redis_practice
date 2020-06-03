@@ -2,7 +2,6 @@
 This file contains all the functionality of the caching system.
 The Cache class works with Redis as a data store.
 """
-import random
 from redis_utils import redis_utils
 from functools import wraps
 from flask import session, abort
@@ -82,12 +81,13 @@ class Cache:
         Else if it is successful, it will return they key name and expiration time as a list.
         """
         try:
+            key = "key"+key_name
             if time_only:
-                return redis_utils.get_expiration_time(key_name)
+                return redis_utils.get_expiration_time(key)
 
             else:
-                exp_time = redis_utils.get_expiration_time(key_name)
-                key = redis_utils.get_key(key_name)
+                exp_time = redis_utils.get_expiration_time(key)
+                key = redis_utils.get_key(key)
                 return [exp_time, key]
 
         except Exception as message:
@@ -98,7 +98,8 @@ class Cache:
         This function makes a key persistent. In other words, removes its expiration time.
         """
         try:
-            status = redis_utils.make_persistent(key_name)
+            key = key_name + session['username']
+            status = redis_utils.make_persistent(key)
             return status
 
         except Exception as message:
@@ -109,9 +110,11 @@ class Cache:
         This function deletes a key and it's instance in the ordered set as well as the hash data.
         """
         try:
-            redis_utils.zrem(self.name, key_name)
-            redis_utils.rem_key(key_name)
-            redis_utils.hdel(key_name, item_hash_field)
+            username = session['username']
+            key = key_name + username
+            redis_utils.zrem(self.name, username)
+            redis_utils.rem_key(key)
+            redis_utils.hdel(username, item_hash_field)
 
             return True
 
@@ -141,13 +144,15 @@ class Cache:
         try:
             cache = redis_utils.decode_bytelist(redis_utils.zrange(self.name))
             if all_items:
-                for key_name in cache:
-                    redis_utils.zrem(self.name, key_name)
-                    redis_utils.rem_key(key_name)
-                    redis_utils.hdel(key_name, item_hash_field)
+                for username in cache:
+                    key = key_name + username
+                    redis_utils.zrem(self.name, username)
+                    redis_utils.rem_key(key)
+                    redis_utils.hdel(username, item_hash_field)
             else:
+                key = key_name + item
                 redis_utils.zrem(self.name, item)
-                redis_utils.rem_key('key' + item)
+                redis_utils.rem_key(key)
                 redis_utils.hdel(item, item_hash_field)
 
             return True
@@ -156,11 +161,15 @@ class Cache:
             return False
 
     def release(self):
+        """
+        This decorator removes all the items related to the cached data(sessions/keys/hash/zset).
+        """
+
         def decorator(view_function):
 
             @wraps(view_function)
             def inner(*args, **kwargs):
-                status = self.rem_key('key' + session['username'])
+                status = self.rem_key(key_name + session['username'])
                 if status:
                     session.pop('username', None)
                 else:
@@ -171,6 +180,12 @@ class Cache:
         return decorator
 
     def memorize(self):
+        """
+        This decorator sets:
+            - expiration_key
+            - hash data
+            - adds a value related to the exp. key in the cache zset.
+        """
         def decoratior(view_function):
 
             @wraps(view_function)
@@ -191,15 +206,18 @@ class Cache:
         return decoratior
 
     def is_hit(self):
-
+        """
+        This decorator returns the expiration_key value to default.
+        Also increments the score of the value in the zset to the highest.
+        """
         def decorator(view_function):
             @wraps(view_function)
             def inner(*args, **kwargs):
                 try:
                     if session['username']:
-                        key_name = 'key' + session['username']
-                        redis_utils.set_expiration(key_name, self.default_expiration)
-                        redis_utils.zincrby_to_highest(self.name, key_name, True)
+                        key = key_name + session['username']
+                        redis_utils.set_expiration(key, self.default_expiration)
+                        redis_utils.zincrby_to_highest(self.name, key, True)
 
                     return view_function(*args, **kwargs)
 
@@ -211,6 +229,10 @@ class Cache:
         return decorator
 
     def evict(self):
+        """
+        This decorator evicts the value in the cache zset with the lowest score
+        and its relations when 75% of the max memory is reached.
+        """
         redis_info = redis_utils.get_redis_info()
         current_memory_usage = float(redis_info['used_memory'])
         max_memory = redis_info['maxmemory']
@@ -222,6 +244,27 @@ class Cache:
                 if current_memory_usage > limit:
                     item_to_remove = redis_utils.zrange_lowest_score(self.name)
                     self.flush(item_to_remove)
+
+                return fn(*args, **kwargs)
+
+            return inner
+
+        return decorator
+
+    def update(self, permission=False):
+        """
+        This decorator updates the value of the cached hash data.
+        NOTE! New data must be written in the data storage first.
+        """
+        def decorator(fn):
+            @wraps(fn)
+            def inner(*args, **kwargs):
+                username = session['username']
+                key = key_name + username
+
+                redis_utils.set_expiration(key, self.default_expiration)
+                redis_utils.zincrby_to_highest(self.name, key, True)
+                self.set_hash(username)
 
                 return fn(*args, **kwargs)
 

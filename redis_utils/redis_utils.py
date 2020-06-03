@@ -220,10 +220,25 @@ def set_key(name, value, expiration_time=None):
         return False
 
 
-def get_key(name):
+def get_key(key):
     try:
-        if r_cli.get(name):
-            return True
+        key_value = r_cli.get(key)
+
+        if key_value:
+            return key_value
+
+        return False
+
+    except Exception as message:
+        return False
+
+
+def get_key_name(key):
+    try:
+        key_name = r_cli.keys(key)
+        key_name = key_name[0].decode()
+        if key_name:
+            return key_name
 
         return False
 
@@ -300,6 +315,22 @@ def json_to_file(json_data, admin=False):
         return False
 
 
+# Writes a given json data to a file. If unsuccessful the function will return false, otherwise true.
+def remove_hash_file(key):
+    try:
+        with open(users_file, "r") as input_file:
+            lines = input_file.readlines()
+        import pdb;pdb.set_trace()
+        with open(users_file, "w") as output_file:
+            for line in lines:
+                if key not in line and line != "\n":
+                    output_file.write(line)
+
+        return True
+
+    except Exception as message:
+        return False
+
 # Reads a given json file to a json object.
 # If to_hash is set to true, the function will return a json data ready to be parsed to a Redis hash.
 # If unsuccessful the function will return false, otherwise the requested object.
@@ -324,7 +355,6 @@ def json_file_to_hash(hash_name, to_hash=False):
 # Use to flush all te redis content. WARNING! There is no data restoration after using this function.
 def flushall():
     r_cli.flushall()
-
 
 
 # Use to decode a list or dict of bytes.

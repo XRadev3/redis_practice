@@ -27,3 +27,13 @@ class RegisterForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired()])
 
     submit = SubmitField('Register')
+
+
+class UpdateForm(FlaskForm):
+    username = StringField('Username')
+    name = StringField('Name')
+    email = StringField('Email')
+    password = PasswordField('Password')
+    group = StringField('Group')
+
+    submit = SubmitField('Update')

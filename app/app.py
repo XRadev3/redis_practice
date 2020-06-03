@@ -15,13 +15,7 @@ from flask import request, render_template, flash, session
 app = flask.Flask(__name__)
 app.config.from_mapping(config.app_config())
 cache = Cache()
-cron.job_clean_cache()
-
-
-@app.route("/temp")
-@cache.evict()
-def temp_call():
-    return "op"
+#cron.job_clean_cache()
 
 
 @app.route("/index")
@@ -30,6 +24,7 @@ def index_page():
 
 
 @app.route("/login", methods=['GET', 'POST'])
+@cache.evict()
 def login_form():
     form = LoginForm()
     title = 'Redis Login'
@@ -108,11 +103,47 @@ def create_user():
         status = redis_utils.json_to_file({form.username.data: {'attributes': user_data_dict}})
 
         if status:
-            return flask.redirect(f'/user/home_page?hash_name={form.username.data}'
-                                  f'&hash_key={form.name.data}',
-                                  201)
+            return flask.redirect(f'/user/home_page?hash_name={session["username"]}')
 
     return render_template("create_user.html", title=title, form=form)
+
+
+@app.route("/user/update", methods=['GET', 'POST'])
+@cache.evict()
+@cache.update()
+def update_user():
+    form = UpdateForm()
+    title = "User customization."
+    username = session['username']
+    hash_field = "attributes"
+    user_hash = redis_utils.json_file_to_hash(username)
+    user_data = user_hash[username]
+
+    if not form.validate_on_submit():
+        form.username.data = username
+        form.name.data = user_data[hash_field]['name']
+        form.email.data = user_data[hash_field]['email']
+        form.password.data = user_data[hash_field]['password']
+        form.group.data = user_data[hash_field]['group']
+
+    else:
+        user_data_dict = {
+            'name': form.name.data,
+            'email': form.email.data,
+            'password': form.password.data,
+            'group': user_data[hash_field]['group']
+        }
+        if redis_utils.remove_hash_file(username):
+            status = redis_utils.json_to_file({username: {'attributes': user_data_dict}})
+
+        else:
+            flask.abort(404)
+
+        if status:
+            flask.flash("Successfully updated!")
+            return flask.redirect(f'/user/home_page?hash_name={username}')
+
+    return render_template("update_base.html", title=title, form=form)
 
 
 @app.route("/user/home_page")
@@ -127,10 +158,9 @@ def user_page():
 
 
 @app.route("/redis/clear")
-#   @require_auth()
 def clear_redis():
     redis_utils.flushall()
     #cron.cron_stop_job()
 
-    return "Memory has been cleared! \n All temporary data is removed!"
+    return "Memory has been cleared! \n Cron jobs have been stopped!"
 

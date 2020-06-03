@@ -9,7 +9,7 @@ def require_auth():
         @wraps(view_function)
         def decorated_function(*args, **kwargs):
             try:
-                key_name = 'user' + session['username']
+                key_name = 'key' + session['username']
                 if redis_utils.get_key(key_name):
                     return view_function(*args, **kwargs)
 
