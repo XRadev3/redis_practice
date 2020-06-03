@@ -8,7 +8,8 @@ from functools import wraps
 from flask import session, abort
 
 
-user_hash_key = 'attributes'
+item_hash_field = 'attributes'
+key_name = 'key'
 
 
 class Cache:
@@ -59,9 +60,8 @@ class Cache:
 
     def set_expiration_key(self, key_value, expiration_time=None):
         """
-        This function sets a key with expiration time. The key name is default to "userN" is a rand number.
+        This function sets a key with expiration time. The key name is default to "keyN" where N=key_value.
         By default the expiration time will be set to 15 min.
-        This represents a hash objects containing all the user data.
         """
         if expiration_time:
             time_to_set = expiration_time
@@ -69,7 +69,7 @@ class Cache:
             time_to_set = self.default_expiration
 
         try:
-            redis_utils.set_key("user" + session['username'], key_value, time_to_set)
+            redis_utils.set_key("key" + session['username'], key_value, time_to_set)
             return True
 
         except Exception as message:
@@ -111,7 +111,7 @@ class Cache:
         try:
             redis_utils.zrem(self.name, key_name)
             redis_utils.rem_key(key_name)
-            redis_utils.hdel(key_name, user_hash_key)
+            redis_utils.hdel(key_name, item_hash_field)
 
             return True
 
@@ -120,29 +120,35 @@ class Cache:
 
     def set_hash(self, hash_name):
         """
-        This function reads the user data from the storage by its hash_name.
+        This function reads the key data from the storage by its hash_name.
         If successful it will create a Redis hash object that will hold the read data.
         If unsuccessful it will return False.
         """
         try:
             hash_data = redis_utils.json_file_to_hash(hash_name)
-            status = redis_utils.hset(hash_name, hash_data[hash_name][user_hash_key])
+            status = redis_utils.hset(hash_name, hash_data[hash_name][item_hash_field])
             return status
 
         except Exception as message:
             return False
 
-    def flush_cache(self):
+    def flush(self, item="", all_items=False):
         """
-        This function clears the whole ordered set in Redis where the cached users are stored.
-        Also removes all active keys from Redis.
+        item -> string
+        Removes a single item and its relations in the cache.
+        If all_items is set clears all items and their relations.
         """
         try:
             cache = redis_utils.decode_bytelist(redis_utils.zrange(self.name))
-            for key_name in cache:
-                redis_utils.zrem(self.name, key_name)
-                redis_utils.rem_key(key_name)
-                redis_utils.hdel(key_name, user_hash_key)
+            if all_items:
+                for key_name in cache:
+                    redis_utils.zrem(self.name, key_name)
+                    redis_utils.rem_key(key_name)
+                    redis_utils.hdel(key_name, item_hash_field)
+            else:
+                redis_utils.zrem(self.name, item)
+                redis_utils.rem_key('key' + item)
+                redis_utils.hdel(item, item_hash_field)
 
             return True
 
@@ -154,7 +160,7 @@ class Cache:
 
             @wraps(view_function)
             def inner(*args, **kwargs):
-                status = self.rem_key('user' + session['username'])
+                status = self.rem_key('key' + session['username'])
                 if status:
                     session.pop('username', None)
                 else:
@@ -191,7 +197,7 @@ class Cache:
             def inner(*args, **kwargs):
                 try:
                     if session['username']:
-                        key_name = 'user' + session['username']
+                        key_name = 'key' + session['username']
                         redis_utils.set_expiration(key_name, self.default_expiration)
                         redis_utils.zincrby_to_highest(self.name, key_name, True)
 
@@ -206,17 +212,18 @@ class Cache:
 
     def evict(self):
         redis_info = redis_utils.get_redis_info()
-        current_memory_usage = redis_info['used_memory']
-        limit = redis_info['maxmemory_human'] * 1000
-        print(limit)
+        current_memory_usage = float(redis_info['used_memory'])
+        max_memory = redis_info['maxmemory']
+        limit = max_memory - (max_memory * 0.25)
 
-        def decorator(view_function):
-            @wraps(view_function)
+        def decorator(fn):
+            @wraps(fn)
             def inner(*args, **kwargs):
                 if current_memory_usage > limit:
-                    self.release()
-                        
-                return view_function(*args, **kwargs)
+                    item_to_remove = redis_utils.zrange_lowest_score(self.name)
+                    self.flush(item_to_remove)
+
+                return fn(*args, **kwargs)
 
             return inner
 

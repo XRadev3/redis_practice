@@ -130,7 +130,7 @@ def user_page():
 #   @require_auth()
 def clear_redis():
     redis_utils.flushall()
-    cron.cron_stop_job()
+    #cron.cron_stop_job()
 
     return "Memory has been cleared! \n All temporary data is removed!"
 

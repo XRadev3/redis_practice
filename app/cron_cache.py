@@ -3,7 +3,7 @@
 import redis
 
 set_name = "cache"
-key_pattern = "k*"
+key_pattern = "key*"
 hash_field = "attributes"
 
 

@@ -160,6 +160,21 @@ def zrange(set_name):
         return False
 
 
+def zrange_lowest_score(set_name, all_items=False):
+    try:
+        if not all_items:
+            all_items = r_cli.zrange(set_name, 0, -1)
+            all_items_sorted = r_cli.zrangebyscore(set_name, 0, len(all_items))
+            lowest_score_name = all_items_sorted[0].decode()
+
+            return lowest_score_name
+
+        return decode_bytelist(all_items)
+
+    except Exception as message:
+        return False
+
+
 def zadd(set_name, key, score):
     try:
         user_status = r_cli.zadd(set_name, {key: score})
@@ -262,6 +277,7 @@ def get_redis_info(single_value=False):
     try:
         if single_value:
             info = r_cli.info(single_value)
+            import pdb;pdb.set_trace()
 
             return info
 
