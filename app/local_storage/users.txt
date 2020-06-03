@@ -1,0 +1,4 @@
+{"icaka": {"attributes": {"name": "hristo hristov", "email": "asdfads@mail.asdf", "password": "123456", "group": "purva"}}}
+{"peshaka": {"attributes": {"name": "Petur Petrov", "email": "peshaka@mail.mail", "password": "123456", "group": "basic"}}}
+
+{"test_user": {"attributes": {"name": "Test Testful", "email": "testytest@testy", "password": "123456", "group": "basic"}}}
