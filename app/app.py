@@ -120,6 +120,8 @@ def update_user():
     user_data = user_hash[username]
 
     if not form.validate_on_submit():
+
+        # Username and group are not available for the user to change.
         form.username.data = username
         form.name.data = user_data[hash_field]['name']
         form.email.data = user_data[hash_field]['email']
@@ -160,7 +162,7 @@ def user_page():
 @app.route("/redis/clear")
 def clear_redis():
     redis_utils.flushall()
-    #cron.cron_stop_job()
+    cron.cron_stop_job()
 
     return "Memory has been cleared! \n Cron jobs have been stopped!"
 

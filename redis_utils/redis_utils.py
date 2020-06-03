@@ -5,6 +5,8 @@ import redis
 import json
 import os
 
+from functools import wraps
+
 r_cli = redis.StrictRedis()
 users_file = os.getcwd() + '/local_storage/users.txt'
 
@@ -331,6 +333,7 @@ def remove_hash_file(key):
     except Exception as message:
         return False
 
+
 # Reads a given json file to a json object.
 # If to_hash is set to true, the function will return a json data ready to be parsed to a Redis hash.
 # If unsuccessful the function will return false, otherwise the requested object.
@@ -350,6 +353,23 @@ def json_file_to_hash(hash_name, to_hash=False):
         return False
 
     return False
+
+
+def rate_limiter():
+    """
+    This decorator is used to limit traffic data.
+
+    """
+    def decorator(fn):
+        @wraps(fn)
+        def decorated_function(*args, **kwargs):
+            try:
+                return fn(*args, **kwargs)
+
+            except Exception as message:
+                return fn(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 
 # Use to flush all te redis content. WARNING! There is no data restoration after using this function.

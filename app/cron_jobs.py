@@ -13,6 +13,7 @@ def job_clean_cache():
     """
     This simple cron job will start the cleaning script 'cron_cache.py'
     This job will be executed each minute.
+    Temporary: To stop the jobs, GET request to '/redis/clean' must be send.
     """
     try:
         cron_minion = CronTab(user=True)

@@ -13,11 +13,11 @@ key_name = 'key'
 
 class Cache:
 
-    def __init__(self, default_expiration=180, name='cache'):
+    def __init__(self, default_expiration=1800, name='cache'):
         """
         default_expiration: the default expiration time of a key in cache in minutes.
-        name: the name of the Redis ordered_set used by the cache.
-        NOTE: while the cache is empty, this ordered_set is not defined.
+        name: the name of the Redis ordered set used by the cache.
+        NOTE: while the cache is empty, this ordered set is not defined.
         """
         self.name = name
         self.default_expiration = default_expiration
@@ -165,9 +165,9 @@ class Cache:
         This decorator removes all the items related to the cached data(sessions/keys/hash/zset).
         """
 
-        def decorator(view_function):
+        def decorator(fn):
 
-            @wraps(view_function)
+            @wraps(fn)
             def inner(*args, **kwargs):
                 status = self.rem_key(key_name + session['username'])
                 if status:
@@ -175,7 +175,7 @@ class Cache:
                 else:
                     abort(404)
 
-                return view_function(*args, **kwargs)
+                return fn(*args, **kwargs)
             return inner
         return decorator
 
@@ -186,9 +186,9 @@ class Cache:
             - hash data
             - adds a value related to the exp. key in the cache zset.
         """
-        def decoratior(view_function):
+        def decoratior(fn):
 
-            @wraps(view_function)
+            @wraps(fn)
             def inner(*args, **kwargs):
                 username = session['username']
                 try:
@@ -197,7 +197,7 @@ class Cache:
                     self.set_os(username, score_to_set)
                     self.set_hash(username)
 
-                    return view_function(*args, **kwargs)
+                    return fn(*args, **kwargs)
 
                 except Exception as message:
                     abort(404)
@@ -210,8 +210,8 @@ class Cache:
         This decorator returns the expiration_key value to default.
         Also increments the score of the value in the zset to the highest.
         """
-        def decorator(view_function):
-            @wraps(view_function)
+        def decorator(fn):
+            @wraps(fn)
             def inner(*args, **kwargs):
                 try:
                     if session['username']:
@@ -219,10 +219,10 @@ class Cache:
                         redis_utils.set_expiration(key, self.default_expiration)
                         redis_utils.zincrby_to_highest(self.name, key, True)
 
-                    return view_function(*args, **kwargs)
+                    return fn(*args, **kwargs)
 
                 except Exception as message:
-                    return view_function(*args, **kwargs)
+                    return fn(*args, **kwargs)
 
             return inner
 
