@@ -1,13 +1,9 @@
 import app.app_utils as app_utils
 import datetime
 
-from app.cache import Cache
 from redis_utils import redis_utils
 from flask import session, abort, flash
 from functools import wraps
-
-
-cache = Cache()
 
 
 def require_auth():
@@ -15,9 +11,11 @@ def require_auth():
         @wraps(view_function)
         def decorated_function(*args, **kwargs):
             try:
-                expiration_key = cache.key_prefix + cache.current_name
+                from app.app import cache
+                username = session['username']
+                expiration_key = cache.key_prefix + username
 
-                if not rate_limiter(cache.current_name):
+                if not rate_limiter(username):
                     flash('Too much requests!')
 
                 if redis_utils.get_key(expiration_key):
@@ -39,17 +37,15 @@ def require_auth():
 
 def check_credentials(username=str, password=str):
     try:
+        from app.app import cache
         user_data = app_utils.get_json_from_file(username)
-        user_pass = user_data[username]['attributes']['password']
-        api_key = user_data[username]['attributes']['API_KEY']
+        user_pass = user_data[username][cache.item_hash_field]['password']
+        api_key = user_data[username][cache.item_hash_field]['API_KEY']
 
     except Exception as message:
         return False
 
     if user_pass == password:
-        return True
-
-    elif api_key:
         return True
 
     else:
@@ -64,10 +60,10 @@ def rate_limiter(username):
     try:
         now = datetime.datetime.now()
         api_key = app_utils.get_api_key(username)
-        redis_key = api_key + "-" + str(now.hour)
-        num_requests = redis_utils.get_key(redis_key)
+        redis_key = api_key + "-" + str(now.minute)
+        num_requests = int(redis_utils.get_key(redis_key)) if redis_utils.get_key(redis_key) else 0
 
-        if num_requests.decode() > 10:
+        if num_requests > 10:
             return False
 
         redis_utils.incr_key(redis_key)

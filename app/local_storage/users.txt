@@ -1,2 +1,3 @@
 
-{"test_user": {"attributes": {"name": "Petur Penenv", "email": "asdfasdfasd", "password": "123456", "group": "basic", "API_KEY": "spMrHmEYqhJLi4vCEbNiDFmPiX0Y0dLKCjgNxx_sBzw"}}}
+{"test_user": {"attributes": {"name": "Todor Todorov", "email": "asdfasdfasd", "password": "111111", "group": "basic", "API_KEY": "ipisNVfgPAeYQ3QbqzLhp2yozYb1JZ9HBeMKHPxwqms"}}}
+{"test_user2": {"attributes": {"name": "Yavor Kostadinov", "email": "asdfasdfas", "password": "123456", "group": "basic", "API_KEY": "6K3KAd3Y1YBLxELO91OpHR7qCM0pXjaKd_3BOAxaii8"}}}

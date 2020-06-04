@@ -221,7 +221,7 @@ def get_key(key):
         key_value = r_cli.get(key)
 
         if key_value:
-            return key_value
+            return key_value.decode()
 
         return False
 

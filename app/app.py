@@ -1,15 +1,21 @@
+#### IMPORTANT ####
+# Yes, yes i know Redis should not be used to store persistent data.
+# This program is made for the sole purpose of practicing Redis w/ python.
+
 import flask
 import app.cron_jobs as cron
 
 from app import config
+from app.cache import Cache
 from app.forms import *
-from app.auth import require_auth, check_credentials, cache
+from app.auth import require_auth, check_credentials
 from redis_utils import redis_utils as redis_utils
 from app import app_utils
 from flask import request, render_template, flash, session
 
 app = flask.Flask(__name__)
 app.config.from_mapping(config.app_config())
+cache = Cache()
 #cron.job_clean_cache()
 
 
@@ -23,7 +29,7 @@ def login_form():
     form = LoginForm()
     title = 'Redis Login'
     try:
-        if cache.current_name:
+        if session['username']:
             return flask.redirect(f"/user/home_page")
 
     except Exception as message:
@@ -31,8 +37,7 @@ def login_form():
 
     if form.validate_on_submit():
         if check_credentials(form.username.data, form.password.data):
-            import pdb;pdb.set_trace()
-            cache.current_name = form.username.data
+            session['username'] = form.username.data
 
             @cache.memorize()
             @cache.evict()

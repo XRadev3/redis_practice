@@ -4,12 +4,12 @@ The Cache class works with Redis as a data store.
 """
 from redis_utils import redis_utils
 from functools import wraps
-from flask import abort
-
+from flask import session, abort
 import app.app_utils as app_utils
 
+
 class Cache:
-    current_name = None
+    current_name = str()
 
     def __init__(self, key_prefix='key', name='cache', item_hash_field='attributes', default_expiration=1800):
         """
@@ -26,7 +26,6 @@ class Cache:
         """
         This function returns all items currently active in the cache in a list.
         """
-
         data_store_list = redis_utils.decode_bytelist(redis_utils.zrange(self.name))
         return data_store_list
 
@@ -69,7 +68,7 @@ class Cache:
             time_to_set = self.default_expiration
 
         try:
-            redis_utils.set_key(self.key_prefix + self.current_name, key_value, time_to_set)
+            redis_utils.set_key(self.key_prefix + session['username'], key_value, time_to_set)
             return True
 
         except Exception as message:
@@ -99,7 +98,7 @@ class Cache:
         This function makes a key persistent. In other words, removes its expiration time.
         """
         try:
-            key = self.key_prefix + self.current_name
+            key = self.key_prefix + session['username']
             status = redis_utils.make_persistent(key)
             return status
 
@@ -111,10 +110,11 @@ class Cache:
         This function deletes a key and it's instance in the ordered set as well as the hash data.
         """
         try:
-            key = self.key_prefix + self.current_name
-            redis_utils.zrem(self.name, self.current_name)
+            username = session['username']
+            key = self.key_prefix + username
+            redis_utils.zrem(self.name, username)
             redis_utils.rem_key(key)
-            redis_utils.hdel(self.current_name, self.item_hash_field)
+            redis_utils.hdel(username, self.item_hash_field)
 
             return True
 
@@ -170,7 +170,7 @@ class Cache:
             @wraps(fn)
             def inner(*args, **kwargs):
                 if self.rem_key():
-                    self.current_name = None
+                    session.pop('username', None)
                 else:
                     abort(404)
 
@@ -189,11 +189,12 @@ class Cache:
 
             @wraps(fn)
             def inner(*args, **kwargs):
+                username = session['username']
                 try:
                     score_to_set = redis_utils.get_set_details(self.name) + 1
-                    self.set_expiration_key(self.current_name)
-                    self.set_os(self.current_name, score_to_set)
-                    self.set_hash(self.current_name)
+                    self.set_expiration_key(username)
+                    self.set_os(username, score_to_set)
+                    self.set_hash(username)
 
                     return fn(*args, **kwargs)
 
@@ -212,8 +213,8 @@ class Cache:
             @wraps(fn)
             def inner(*args, **kwargs):
                 try:
-                    if self.current_name:
-                        key = self.key_prefix + self.current_name
+                    if session['username']:
+                        key = self.key_prefix + session['username']
                         redis_utils.set_expiration(key, self.default_expiration)
                         redis_utils.zincrby_to_highest(self.name, key, True)
 
@@ -257,11 +258,12 @@ class Cache:
         def decorator(fn):
             @wraps(fn)
             def inner(*args, **kwargs):
-                key = self.key_prefix + self.current_name
+                username = session['username']
+                key = self.key_prefix + username
 
                 redis_utils.set_expiration(key, self.default_expiration)
                 redis_utils.zincrby_to_highest(self.name, key, True)
-                self.set_hash(self.current_name)
+                self.set_hash(username)
 
                 return fn(*args, **kwargs)
 
