@@ -3,18 +3,17 @@
 # This program is made for the sole purpose of practicing Redis w/ python.
 
 import flask
+import app.cron_jobs as cron
 
 from app import config
-import app.cron_jobs as cron
-from app.cache import Cache
 from app.forms import *
-from app.auth import require_auth
+from app.auth import require_auth, check_credentials, cache
 from redis_utils import redis_utils as redis_utils
+from app import app_utils
 from flask import request, render_template, flash, session
 
 app = flask.Flask(__name__)
 app.config.from_mapping(config.app_config())
-cache = Cache()
 #cron.job_clean_cache()
 
 
@@ -24,33 +23,31 @@ def index_page():
 
 
 @app.route("/login", methods=['GET', 'POST'])
-@cache.evict()
 def login_form():
     form = LoginForm()
     title = 'Redis Login'
     try:
-        if session['username']:
-            return flask.redirect(f"/user/home_page?hash_name={session['username']}")
+        if cache.current_name:
+            return flask.redirect(f"/user/home_page")
 
     except Exception as message:
         pass
 
     if form.validate_on_submit():
-        username = form.username.data
-        user = redis_utils.json_file_to_hash(username)
-
-        if user and user[username]['attributes']['password'] == form.password.data:
-            session['username'] = username
+        if check_credentials(form.username.data, form.password.data):
+            import pdb;pdb.set_trace()
+            cache.current_name = form.username.data
 
             @cache.memorize()
+            @cache.evict()
             def call_cache():
-                return flask.redirect(f'/user/home_page?hash_name={username}')
+                return flask.redirect(f'/user/home_page')
 
             return call_cache()
 
         else:
             flash('Invalid username or password!')
-            return flask.redirect('/login')
+            return render_template('login.html', title=title, form=form)
 
     return render_template('login.html', title=title, form=form)
 
@@ -63,6 +60,7 @@ def logout():
 
 
 @app.route("/register", methods=['GET', 'POST'])
+@cache.evict()
 def register():
     form = RegisterForm()
     title = "Register"
@@ -75,11 +73,11 @@ def register():
             'group': 'basic'
         }
 
-        if redis_utils.json_file_to_hash(form.username.data):
+        if app_utils.get_json_from_file(form.username.data):
             flask.flash("This username already exits!")
             return render_template("register.html", title=title, form=form)
 
-        status = redis_utils.json_to_file({form.username.data: {'attributes': user_data_dict}})
+        status = app_utils.append_json_to_file({form.username.data: {'attributes': user_data_dict}})
 
         if status:
             flask.flash("Successfully registered!")
@@ -89,6 +87,7 @@ def register():
 
 
 @app.route("/user/create", methods=['GET', 'POST'])
+@cache.evict()
 def create_user():
     form = CreateUserForm()
     title = "User creation panel."
@@ -100,23 +99,20 @@ def create_user():
             'password': form.password.data,
             'group': form.group.data
         }
-        status = redis_utils.json_to_file({form.username.data: {'attributes': user_data_dict}})
 
-        if status:
-            return flask.redirect(f'/user/home_page?hash_name={session["username"]}')
+        if app_utils.append_json_to_file({form.username.data: {'attributes': user_data_dict}}):
+            return flask.redirect(f'/user/home_page')
 
     return render_template("create_user.html", title=title, form=form)
 
 
 @app.route("/user/update", methods=['GET', 'POST'])
-@cache.evict()
-@cache.update()
 def update_user():
     form = UpdateForm()
     title = "User customization."
     username = session['username']
     hash_field = "attributes"
-    user_hash = redis_utils.json_file_to_hash(username)
+    user_hash = app_utils.get_json_from_file(username)
     user_data = user_hash[username]
 
     if not form.validate_on_submit():
@@ -135,28 +131,28 @@ def update_user():
             'password': form.password.data,
             'group': user_data[hash_field]['group']
         }
-        if redis_utils.remove_hash_file(username):
-            status = redis_utils.json_to_file({username: {'attributes': user_data_dict}})
+        if app_utils.del_json_from_file(username) and app_utils.append_json_to_file({username: {'attributes': user_data_dict}}):
+            @cache.update()
+            def call_cache():
+                flask.flash("Successfully updated!")
+                return flask.redirect(f'/user/home_page')
+            call_cache()
 
         else:
             flask.abort(404)
-
-        if status:
-            flask.flash("Successfully updated!")
-            return flask.redirect(f'/user/home_page?hash_name={username}')
 
     return render_template("update_base.html", title=title, form=form)
 
 
 @app.route("/user/home_page")
-@require_auth()
 @cache.is_hit()
+@require_auth()
 def user_page():
-    request_args = request.args.to_dict()
     title = 'User Page'
-    response = redis_utils.hget(request_args['hash_name'], 'attributes')
+    data = redis_utils.hget(session['username'], 'attributes')
+    data = data['name']
 
-    return render_template("user_home.html", title=title, name=str(response['data']))
+    return render_template("user_home.html", title=title, name=data)
 
 
 @app.route("/redis/clear")

@@ -4,16 +4,14 @@ The Cache class works with Redis as a data store.
 """
 from redis_utils import redis_utils
 from functools import wraps
-from flask import session, abort
+from flask import abort
 
-
-item_hash_field = 'attributes'
-key_name = 'key'
-
+import app.app_utils as app_utils
 
 class Cache:
+    current_name = None
 
-    def __init__(self, default_expiration=1800, name='cache'):
+    def __init__(self, key_prefix='key', name='cache', item_hash_field='attributes', default_expiration=1800):
         """
         default_expiration: the default expiration time of a key in cache in minutes.
         name: the name of the Redis ordered set used by the cache.
@@ -21,11 +19,14 @@ class Cache:
         """
         self.name = name
         self.default_expiration = default_expiration
+        self.key_prefix = key_prefix
+        self.item_hash_field = item_hash_field
 
     def get_cache(self):
         """
         This function returns all items currently active in the cache in a list.
         """
+
         data_store_list = redis_utils.decode_bytelist(redis_utils.zrange(self.name))
         return data_store_list
 
@@ -44,13 +45,13 @@ class Cache:
         except Exception as message:
             return message
 
-    def set_os(self, key_name, score):
+    def set_os(self, key, score):
         """
         Arguments to create a ordered_set: set name, key name, key value.
         The same way we add a key to a ordered_set.
         """
         try:
-            redis_utils.zadd(self.name, key_name, score)
+            redis_utils.zadd(self.name, key, score)
             redis_utils.zrange(self.name)
             return True
 
@@ -68,20 +69,20 @@ class Cache:
             time_to_set = self.default_expiration
 
         try:
-            redis_utils.set_key("key" + session['username'], key_value, time_to_set)
+            redis_utils.set_key(self.key_prefix + self.current_name, key_value, time_to_set)
             return True
 
         except Exception as message:
             return False
 
-    def get_expiration_key(self, key_name, time_only=False):
+    def get_expiration_key(self, key, time_only=False):
         """
         This function returns a active key and its expiration time.
         If time_only is set, return the expiration time left on the key as a string.
         Else if it is successful, it will return they key name and expiration time as a list.
         """
         try:
-            key = "key"+key_name
+            key = self.key_prefix + key
             if time_only:
                 return redis_utils.get_expiration_time(key)
 
@@ -93,28 +94,27 @@ class Cache:
         except Exception as message:
             return False
 
-    def make_key_persistent(self, key_name):
+    def make_key_persistent(self):
         """
         This function makes a key persistent. In other words, removes its expiration time.
         """
         try:
-            key = key_name + session['username']
+            key = self.key_prefix + self.current_name
             status = redis_utils.make_persistent(key)
             return status
 
         except Exception as message:
             return False
 
-    def rem_key(self, key_name):
+    def rem_key(self):
         """
         This function deletes a key and it's instance in the ordered set as well as the hash data.
         """
         try:
-            username = session['username']
-            key = key_name + username
-            redis_utils.zrem(self.name, username)
+            key = self.key_prefix + self.current_name
+            redis_utils.zrem(self.name, self.current_name)
             redis_utils.rem_key(key)
-            redis_utils.hdel(username, item_hash_field)
+            redis_utils.hdel(self.current_name, self.item_hash_field)
 
             return True
 
@@ -128,8 +128,8 @@ class Cache:
         If unsuccessful it will return False.
         """
         try:
-            hash_data = redis_utils.json_file_to_hash(hash_name)
-            status = redis_utils.hset(hash_name, hash_data[hash_name][item_hash_field])
+            hash_data = app_utils.get_json_from_file(hash_name)
+            status = redis_utils.hset(hash_name, hash_data[hash_name][self.item_hash_field])
             return status
 
         except Exception as message:
@@ -145,15 +145,15 @@ class Cache:
             cache = redis_utils.decode_bytelist(redis_utils.zrange(self.name))
             if all_items:
                 for username in cache:
-                    key = key_name + username
+                    key = self.key_prefix + username
                     redis_utils.zrem(self.name, username)
                     redis_utils.rem_key(key)
-                    redis_utils.hdel(username, item_hash_field)
+                    redis_utils.hdel(username, self.item_hash_field)
             else:
-                key = key_name + item
+                key = self.key_prefix + item
                 redis_utils.zrem(self.name, item)
                 redis_utils.rem_key(key)
-                redis_utils.hdel(item, item_hash_field)
+                redis_utils.hdel(item, self.item_hash_field)
 
             return True
 
@@ -169,9 +169,8 @@ class Cache:
 
             @wraps(fn)
             def inner(*args, **kwargs):
-                status = self.rem_key(key_name + session['username'])
-                if status:
-                    session.pop('username', None)
+                if self.rem_key():
+                    self.current_name = None
                 else:
                     abort(404)
 
@@ -190,12 +189,11 @@ class Cache:
 
             @wraps(fn)
             def inner(*args, **kwargs):
-                username = session['username']
                 try:
                     score_to_set = redis_utils.get_set_details(self.name) + 1
-                    self.set_expiration_key(username)
-                    self.set_os(username, score_to_set)
-                    self.set_hash(username)
+                    self.set_expiration_key(self.current_name)
+                    self.set_os(self.current_name, score_to_set)
+                    self.set_hash(self.current_name)
 
                     return fn(*args, **kwargs)
 
@@ -214,8 +212,8 @@ class Cache:
             @wraps(fn)
             def inner(*args, **kwargs):
                 try:
-                    if session['username']:
-                        key = key_name + session['username']
+                    if self.current_name:
+                        key = self.key_prefix + self.current_name
                         redis_utils.set_expiration(key, self.default_expiration)
                         redis_utils.zincrby_to_highest(self.name, key, True)
 
@@ -251,7 +249,7 @@ class Cache:
 
         return decorator
 
-    def update(self, permission=False):
+    def update(self):
         """
         This decorator updates the value of the cached hash data.
         NOTE! New data must be written in the data storage first.
@@ -259,12 +257,11 @@ class Cache:
         def decorator(fn):
             @wraps(fn)
             def inner(*args, **kwargs):
-                username = session['username']
-                key = key_name + username
+                key = self.key_prefix + self.current_name
 
                 redis_utils.set_expiration(key, self.default_expiration)
                 redis_utils.zincrby_to_highest(self.name, key, True)
-                self.set_hash(username)
+                self.set_hash(self.current_name)
 
                 return fn(*args, **kwargs)
 

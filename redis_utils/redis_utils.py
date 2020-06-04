@@ -8,7 +8,6 @@ import os
 from functools import wraps
 
 r_cli = redis.StrictRedis()
-users_file = os.getcwd() + '/local_storage/users.txt'
 
 
 ###### HASH ######
@@ -50,20 +49,15 @@ def hdel(hash_name, hash_key):
 
 
 def hget(hash_name, hash_key):
-    msg = 'Input data is incorrect!'
-
     try:
         r_hash = r_cli.hget(name=hash_name, key=hash_key)
         if r_hash:
-            return {'data': r_hash.decode(), 'status': 201}
+            return eval(r_hash.decode())
 
-        elif r_hash == 0:
-            return {'data': msg, 'status': 400}
-
-        return {'data': msg, 'status': 400}
+        return False
 
     except Exception as msg:
-        return {'data': msg, 'status': 500}
+        return False
 
 
 def hgetall(hash_name):
@@ -235,6 +229,17 @@ def get_key(key):
         return False
 
 
+def incr_key(key):
+    try:
+        if r_cli.incr(key):
+            return True
+
+        return False
+
+    except Exception as message:
+        return False
+
+
 def get_key_name(key):
     try:
         key_name = r_cli.keys(key)
@@ -303,73 +308,6 @@ def get_redis_info(single_value=False):
 
     except Exception as message:
         return False
-
-
-# Writes a given json data to a file. If unsuccessful the function will return false, otherwise true.
-def json_to_file(json_data, admin=False):
-    try:
-        with open(users_file, 'a') as output_file:
-            output_file.write("\n")
-            json.dump(json_data, output_file)
-            return True
-
-    except Exception as message:
-        return False
-
-
-# Writes a given json data to a file. If unsuccessful the function will return false, otherwise true.
-def remove_hash_file(key):
-    try:
-        with open(users_file, "r") as input_file:
-            lines = input_file.readlines()
-        import pdb;pdb.set_trace()
-        with open(users_file, "w") as output_file:
-            for line in lines:
-                if key not in line and line != "\n":
-                    output_file.write(line)
-
-        return True
-
-    except Exception as message:
-        return False
-
-
-# Reads a given json file to a json object.
-# If to_hash is set to true, the function will return a json data ready to be parsed to a Redis hash.
-# If unsuccessful the function will return false, otherwise the requested object.
-def json_file_to_hash(hash_name, to_hash=False):
-
-    try:
-        with open(users_file, 'r') as input_file:
-
-            for line in input_file:
-                if line == "\n":
-                    pass
-                elif hash_name in line:
-                    json_data = json.loads(line)
-                    return json_data
-
-    except Exception as message:
-        return False
-
-    return False
-
-
-def rate_limiter():
-    """
-    This decorator is used to limit traffic data.
-
-    """
-    def decorator(fn):
-        @wraps(fn)
-        def decorated_function(*args, **kwargs):
-            try:
-                return fn(*args, **kwargs)
-
-            except Exception as message:
-                return fn(*args, **kwargs)
-        return decorated_function
-    return decorator
 
 
 # Use to flush all te redis content. WARNING! There is no data restoration after using this function.
