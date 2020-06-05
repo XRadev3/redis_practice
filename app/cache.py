@@ -5,7 +5,7 @@ The Cache class works with Redis as a data store.
 from redis_utils import redis_utils
 from functools import wraps
 from flask import session, abort
-import app.app_utils as app_utils
+import app.auth_utils as app_utils
 
 
 class Cache:

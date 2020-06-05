@@ -229,12 +229,19 @@ def get_key(key):
         return False
 
 
+def get_key_len(key):
+    try:
+        # DOES NOT RETURN SIZE BUT NUMBER OF ITEMS INSIDE THE HASH!!!!!! I NEED TO CHANGE IT.
+        size = r_cli.hlen(key)
+        return size
+
+    except Exception as message:
+        return False
+
+
 def incr_key(key):
     try:
-        if r_cli.incr(key):
-            return True
-
-        return False
+        return r_cli.incr(key)
 
     except Exception as message:
         return False
@@ -297,14 +304,14 @@ def get_redis_info(single_value=False):
     if set it will return only a single line from the configuration file.
     """
     try:
-        if single_value:
-            info = r_cli.info(single_value)
-            import pdb;pdb.set_trace()
+        all_info = r_cli.info()
 
+        if single_value:
+            import pdb;pdb.set_trace()
+            info = all_info[single_value]
             return info
 
-        info = r_cli.info()
-        return info
+        return all_info
 
     except Exception as message:
         return False

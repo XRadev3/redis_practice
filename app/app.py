@@ -8,15 +8,20 @@ import app.cron_jobs as cron
 from app import config
 from app.cache import Cache
 from app.forms import *
-from app.auth import require_auth, check_credentials
+from app.auth import require_auth, check_password
 from redis_utils import redis_utils as redis_utils
-from app import app_utils
+from app import auth_utils
 from flask import request, render_template, flash, session
 
 app = flask.Flask(__name__)
 app.config.from_mapping(config.app_config())
 cache = Cache()
 #cron.job_clean_cache()
+
+
+@app.route("/temp")
+def temp_route():
+    return auth_utils.get_group_info(all_groups=True)
 
 
 @app.route("/index")
@@ -36,7 +41,7 @@ def login_form():
         pass
 
     if form.validate_on_submit():
-        if check_credentials(form.username.data, form.password.data):
+        if check_password(form.username.data, form.password.data):
             session['username'] = form.username.data
 
             @cache.memorize()
@@ -70,15 +75,15 @@ def register():
         user_data_dict = {
             'name': form.name.data,
             'email': form.email.data,
-            'password': form.password.data,
+            'password': auth_utils.secure_key(form.password.data),
             'group': 'basic'
         }
 
-        if app_utils.get_json_from_file(form.username.data):
+        if auth_utils.get_json_from_file(form.username.data):
             flask.flash("This username already exits!")
             return render_template("register.html", title=title, form=form)
 
-        status = app_utils.append_json_to_file({form.username.data: {'attributes': user_data_dict}})
+        status = auth_utils.append_json_to_file({form.username.data: {'attributes': user_data_dict}})
 
         if status:
             flask.flash("Successfully registered!")
@@ -101,7 +106,7 @@ def create_user():
             'group': form.group.data
         }
 
-        if app_utils.append_json_to_file({form.username.data: {'attributes': user_data_dict}}):
+        if auth_utils.append_json_to_file({form.username.data: {'attributes': user_data_dict}}):
             return flask.redirect(f'/user/home_page')
 
     return render_template("create_user.html", title=title, form=form)
@@ -113,7 +118,7 @@ def update_user():
     title = "User customization."
     username = session['username']
     hash_field = "attributes"
-    user_hash = app_utils.get_json_from_file(username)
+    user_hash = auth_utils.get_json_from_file(username)
     user_data = user_hash[username]
 
     if not form.validate_on_submit():
@@ -129,10 +134,10 @@ def update_user():
         user_data_dict = {
             'name': form.name.data,
             'email': form.email.data,
-            'password': form.password.data,
+            'password': auth_utils.secure_key(form.password.data),
             'group': user_data[hash_field]['group']
         }
-        if app_utils.del_json_from_file(username) and app_utils.append_json_to_file({username: {'attributes': user_data_dict}}):
+        if auth_utils.del_json_from_file(username) and auth_utils.append_json_to_file({username: {'attributes': user_data_dict}}):
             @cache.update()
             def call_cache():
                 flask.flash("Successfully updated!")
@@ -143,6 +148,11 @@ def update_user():
             flask.abort(404)
 
     return render_template("update_base.html", title=title, form=form)
+
+
+@app.route("/user/groups", methods=['GET', 'POST'])
+def update_groups():
+    return False
 
 
 @app.route("/user/home_page")

@@ -2,8 +2,28 @@ import os
 import json
 import secrets
 
+from werkzeug.security import generate_password_hash, check_password_hash
+
 users_file = os.getcwd() + '/local_storage/users.txt'
-api_keys = os.getcwd() + '/local_storage/api_keys.txt'
+group_file = os.getcwd() + '/local_storage/groups.txt'
+
+
+def secure_key(key=str()):
+    """
+    Encrypts the given security key.
+    Returns the encrypted key.
+    """
+    encrypted_key = generate_password_hash(key)
+    return encrypted_key
+
+
+def check_key(encrypted_key=str(), input_key=str()):
+    """
+    Checks if the given encrypted_key is equal ot the decrypted input_key.
+    Returns False if the keys are different.
+    """
+    bingo = check_password_hash(encrypted_key, input_key)
+    return bingo
 
 
 # Writes a given json data to a file. If unsuccessful the function will return false, otherwise true.
@@ -54,6 +74,39 @@ def get_json_from_file(key):
         return False
 
     return False
+
+
+def get_group_info(user_data=dict(), all_groups=False):
+    try:
+        with open(group_file, 'r') as text_file:
+            line = text_file.readline()
+            read_data = json.loads(line)
+
+            if all_groups:
+                return read_data
+
+            group = user_data['group']
+            return read_data[group]
+
+    except Exception as message:
+        return False
+
+
+def update_group(group, new_values):
+    try:
+        with open(group_file, 'r') as text_file:
+            line = text_file.readline()
+            line = json.loads(line)
+
+        line[group] = new_values
+
+        with open(group_file, 'w') as output_file:
+            output_file.write(json.dumps(line))
+
+        return True
+
+    except Exception as message:
+        return False
 
 
 def set_api_key(json_data):
