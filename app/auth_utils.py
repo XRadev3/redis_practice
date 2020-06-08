@@ -1,6 +1,7 @@
 import os
 import json
 import secrets
+import logging
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -26,8 +27,14 @@ def check_key(encrypted_key=str(), input_key=str()):
     return bingo
 
 
-# Writes a given json data to a file. If unsuccessful the function will return false, otherwise true.
 def append_json_to_file(json_data):
+    """
+    json_data -> data to write(dict)
+    Writes the given data to the file on a new line.
+    If successful returns True,
+    otherwise returns False.
+    """
+
     try:
         json_data = set_api_key(json_data)
         with open(users_file, 'a') as output_file:
@@ -36,11 +43,18 @@ def append_json_to_file(json_data):
             return True
 
     except Exception as message:
+        logging.log(logging.ERROR, str(message))
         return False
 
 
-# Writes a given json data to a file. If unsuccessful the function will return false, otherwise true.
 def del_json_from_file(key):
+    """
+    key -> dict key(string)
+    Deletes a line from a file the holds the given key.
+    If successful, return True,
+    otherwise False.
+    """
+
     try:
         with open(users_file, "r") as input_file:
             lines = input_file.readlines()
@@ -53,12 +67,16 @@ def del_json_from_file(key):
         return True
 
     except Exception as message:
+        logging.log(logging.ERROR, str(message))
         return False
 
 
-# Reads a given json file to a json object.
-# If unsuccessful the function will return false, otherwise the requested object.
 def get_json_from_file(key):
+    """
+    key -> dict key(string)
+    Returns a line from a file the holds the given key,
+    otherwise False.
+    """
 
     try:
         with open(users_file, 'r') as input_file:
@@ -71,12 +89,19 @@ def get_json_from_file(key):
                     return json_data
 
     except Exception as message:
+        logging.log(logging.ERROR, str(message))
         return False
 
     return False
 
 
 def get_group_info(user_data=dict(), all_groups=False):
+    """
+    user_data -> dict(string)
+    Returns the key value pairs of a group
+    or if all_groups is True, all groups.
+    otherwise False.
+    """
     try:
         with open(group_file, 'r') as text_file:
             line = text_file.readline()
@@ -89,10 +114,18 @@ def get_group_info(user_data=dict(), all_groups=False):
             return read_data[group]
 
     except Exception as message:
+        logging.log(logging.ERROR, str(message))
         return False
 
 
 def update_group(group, new_values):
+    """
+    group -> dict key(string)
+    new_values -> dict value(dict)
+    Updates a group's values.
+    If successful, return True,
+    otherwise False.
+    """
     try:
         with open(group_file, 'r') as text_file:
             line = text_file.readline()
@@ -106,6 +139,7 @@ def update_group(group, new_values):
         return True
 
     except Exception as message:
+        logging.log(logging.ERROR, str(message))
         return False
 
 
@@ -122,6 +156,7 @@ def set_api_key(json_data):
         return output_json
 
     except Exception as message:
+        logging.log(logging.ERROR, str(message))
         return False
 
 
@@ -135,4 +170,5 @@ def get_api_key(key):
         return api_key
 
     except Exception as message:
+        logging.log(logging.ERROR, str(message))
         return False

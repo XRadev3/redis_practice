@@ -2,14 +2,20 @@
 This file contains all the functionality of the caching system.
 The Cache class works with Redis as a data store.
 """
-from redis_utils import redis_utils
+import os
+import logging
+import subprocess
+import app.auth_utils as app_utils
+
+
 from functools import wraps
 from flask import session, abort
-import app.auth_utils as app_utils
+from redis_utils import redis_utils
 
 
 class Cache:
     current_name = str()
+    is_cleaning = False
 
     def __init__(self, key_prefix='key', name='cache', item_hash_field='attributes', default_expiration=1800):
         """
@@ -21,6 +27,16 @@ class Cache:
         self.default_expiration = default_expiration
         self.key_prefix = key_prefix
         self.item_hash_field = item_hash_field
+
+        if not self.is_cleaning:
+            path = os.getcwd() + '/cache_cleaner.py'
+
+            subprocess.Popen(
+                ['python3', path],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+            )
+            self.is_cleaning = True
 
     def get_cache(self):
         """
@@ -42,6 +58,7 @@ class Cache:
             return False
 
         except Exception as message:
+            logging.log(logging.ERROR, str(message))
             return message
 
     def set_os(self, key, score):
@@ -55,6 +72,7 @@ class Cache:
             return True
 
         except Exception as message:
+            logging.log(logging.ERROR, str(message))
             return False
 
     def set_expiration_key(self, key_value, expiration_time=None):
@@ -72,6 +90,7 @@ class Cache:
             return True
 
         except Exception as message:
+            logging.log(logging.ERROR, str(message))
             return False
 
     def get_expiration_key(self, key, time_only=False):
@@ -91,6 +110,7 @@ class Cache:
                 return [exp_time, key]
 
         except Exception as message:
+            logging.log(logging.ERROR, str(message))
             return False
 
     def make_key_persistent(self):
@@ -103,6 +123,7 @@ class Cache:
             return status
 
         except Exception as message:
+            logging.log(logging.ERROR, str(message))
             return False
 
     def rem_key(self):
@@ -119,6 +140,7 @@ class Cache:
             return True
 
         except Exception as message:
+            logging.log(logging.ERROR, str(message))
             return False
 
     def set_hash(self, hash_name):
@@ -133,6 +155,7 @@ class Cache:
             return status
 
         except Exception as message:
+            logging.log(logging.ERROR, str(message))
             return False
 
     def flush(self, item="", all_items=False):
@@ -158,6 +181,7 @@ class Cache:
             return True
 
         except Exception as message:
+            logging.log(logging.ERROR, str(message))
             return False
 
     def release(self):
@@ -191,7 +215,7 @@ class Cache:
             def inner(*args, **kwargs):
                 username = session['username']
                 try:
-                    score_to_set = redis_utils.get_set_details(self.name) + 1
+                    score_to_set = redis_utils.get_ordered_set_details(self.name) + 1
                     self.set_expiration_key(username)
                     self.set_os(username, score_to_set)
                     self.set_hash(username)
@@ -221,6 +245,7 @@ class Cache:
                     return fn(*args, **kwargs)
 
                 except Exception as message:
+                    logging.log(logging.ERROR, str(message))
                     return fn(*args, **kwargs)
 
             return inner
@@ -229,7 +254,7 @@ class Cache:
 
     def evict(self):
         """
-        This decorator evicts the value in the cache zset with the lowest score
+    This decorator evicts the value in the cache zset with the lowest score
         and its relations when 75% of the max memory is reached.
         """
         redis_info = redis_utils.get_redis_info()

@@ -5,13 +5,13 @@ import os
 
 python_dir = os.getcwd()
 python_path = python_dir + "/../venv/bin/python3"
-job_path = ' /home/hristo/virtualenvironments/personal_training/redis_practice/app/cron_cache.py >/dev/null 2>&1'
+job_path = ' /home/hristo/virtualenvironments/personal_training/redis_practice/app/cache_cleaner.py >/dev/null 2>&1'
 command = python_path + job_path
 
 
 def job_clean_cache():
     """
-    This simple cron job will start the cleaning script 'cron_cache.py'
+    This simple cron job will start the cleaning script 'cache_cleaner.py'
     This job will be executed each minute.
     Temporary: To stop the jobs, GET request to '/redis/clean' must be send.
     """

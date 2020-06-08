@@ -3,24 +3,25 @@
 # This program is made for the sole purpose of practicing Redis w/ python.
 
 import flask
-import app.cron_jobs as cron
 
-from app import config
-from app.cache import Cache
+from app import auth_utils
 from app.forms import *
 from app.auth import require_auth, check_password
+from app.config import get_app_conf, cache
 from redis_utils import redis_utils as redis_utils
-from app import auth_utils
 from flask import request, render_template, flash, session
 
+
 app = flask.Flask(__name__)
-app.config.from_mapping(config.app_config())
-cache = Cache()
-#cron.job_clean_cache()
+app.config.update(get_app_conf())
 
 
 @app.route("/temp")
 def temp_route():
+    temp = True
+    while temp:
+        redis_utils.get_redis_info('maxmemory')
+
     return auth_utils.get_group_info(all_groups=True)
 
 
@@ -169,7 +170,5 @@ def user_page():
 @app.route("/redis/clear")
 def clear_redis():
     redis_utils.flushall()
-    cron.cron_stop_job()
 
     return "Memory has been cleared! \n Cron jobs have been stopped!"
-
