@@ -27,7 +27,7 @@ def check_key(encrypted_key=str(), input_key=str()):
     return bingo
 
 
-def append_json_to_file(json_data):
+def append_json_to_file(json_data_input):
     """
     json_data -> data to write(dict)
     Writes the given data to the file on a new line.
@@ -36,10 +36,11 @@ def append_json_to_file(json_data):
     """
 
     try:
-        json_data = set_api_key(json_data)
+        json_data_output = set_api_key(json_data_input)
+
         with open(users_file, 'a') as output_file:
             output_file.write("\n")
-            json.dump(json_data, output_file)
+            json.dump(json_data_output, output_file)
             return True
 
     except Exception as message:
@@ -150,7 +151,9 @@ def set_api_key(json_data):
         user_data_key = list(nested_dict.keys())[0]
         api_key = secrets.token_urlsafe()
 
-        nested_dict[user_data_key].update({'API_KEY': api_key})
+        if not get_api_key(user_key):
+            nested_dict[user_data_key].update({'API_KEY': api_key})
+
         output_json = {user_key: nested_dict}
 
         return output_json
@@ -160,9 +163,9 @@ def set_api_key(json_data):
         return False
 
 
-def get_api_key(key):
+def get_api_key(json_key):
     try:
-        json_data = get_json_from_file(key)
+        json_data = get_json_from_file(json_key)
         nested_dict = list(json_data.values())[0]
         user_data_key = list(nested_dict.keys())[0]
         api_key = nested_dict[user_data_key]['API_KEY']
@@ -172,3 +175,4 @@ def get_api_key(key):
     except Exception as message:
         logging.log(logging.ERROR, str(message))
         return False
+

@@ -9,7 +9,7 @@ import app.auth_utils as app_utils
 
 
 from functools import wraps
-from flask import session, abort
+from flask import session, make_response, redirect
 from redis_utils import redis_utils
 
 
@@ -17,10 +17,13 @@ class Cache:
     current_name = str()
     is_cleaning = False
 
-    def __init__(self, key_prefix='key', name='cache', item_hash_field='attributes', default_expiration=1800):
+    def __init__(self, key_prefix='key_', name='cache', item_hash_field='attributes', default_expiration=1800):
         """
         default_expiration: the default expiration time of a key in cache in minutes.
         name: the name of the Redis ordered set used by the cache.
+        key_prefix: prefix to the expiration key.
+        item_hash_field: static key pointing to the nested dict in the hash.
+        (hash -> {'hash_key': {'attributes': {your_data}}})
         NOTE: while the cache is empty, this ordered set is not defined.
         """
         self.name = name
@@ -196,7 +199,7 @@ class Cache:
                 if self.rem_key():
                     session.pop('username', None)
                 else:
-                    abort(404)
+                    redirect("/", 404)
 
                 return fn(*args, **kwargs)
             return inner
@@ -223,7 +226,8 @@ class Cache:
                     return fn(*args, **kwargs)
 
                 except Exception as message:
-                    abort(404)
+                    response = make_response(redirect('/', ), 404, )
+                    return response
 
             return inner
         return decoratior
@@ -254,7 +258,7 @@ class Cache:
 
     def evict(self):
         """
-    This decorator evicts the value in the cache zset with the lowest score
+        This decorator evicts the value in the cache zset with the lowest score
         and its relations when 75% of the max memory is reached.
         """
         redis_info = redis_utils.get_redis_info()

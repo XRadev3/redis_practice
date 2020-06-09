@@ -9,7 +9,7 @@ from app.forms import *
 from app.auth import require_auth, check_password
 from app.config import get_app_conf, cache
 from redis_utils import redis_utils as redis_utils
-from flask import request, render_template, flash, session
+from flask import render_template, flash, session
 
 
 app = flask.Flask(__name__)
@@ -18,16 +18,17 @@ app.config.update(get_app_conf())
 
 @app.route("/temp")
 def temp_route():
-    temp = True
-    while temp:
-        redis_utils.get_redis_info('maxmemory')
-
-    return auth_utils.get_group_info(all_groups=True)
+    return str(auth_utils.get_api_key('test_user'))
 
 
-@app.route("/index")
+@app.route("/")
 def index_page():
-    return render_template('base.html')
+    try:
+        if session['username']:
+            return render_template('base_logged.html')
+
+    except Exception as message:
+        return render_template('base.html')
 
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -60,10 +61,10 @@ def login_form():
 
 
 @app.route("/logout")
-@require_auth()
+@require_auth
 @cache.release()
 def logout():
-    return flask.redirect('/index')
+    return flask.redirect('/')
 
 
 @app.route("/register", methods=['GET', 'POST'])
@@ -94,6 +95,7 @@ def register():
 
 
 @app.route("/user/create", methods=['GET', 'POST'])
+@cache.is_hit()
 @cache.evict()
 def create_user():
     form = CreateUserForm()
@@ -114,6 +116,7 @@ def create_user():
 
 
 @app.route("/user/update", methods=['GET', 'POST'])
+@cache.is_hit()
 def update_user():
     form = UpdateForm()
     title = "User customization."
@@ -146,7 +149,8 @@ def update_user():
             call_cache()
 
         else:
-            flask.abort(404)
+            response = flask.make_response(flask.redirect('/', ), 404, )
+            return response
 
     return render_template("update_base.html", title=title, form=form)
 
@@ -158,7 +162,7 @@ def update_groups():
 
 @app.route("/user/home_page")
 @cache.is_hit()
-@require_auth()
+@require_auth
 def user_page():
     title = 'User Page'
     data = redis_utils.hget(session['username'], 'attributes')
