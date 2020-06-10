@@ -3,9 +3,9 @@ This file contains all the functionality of the caching system.
 The Cache class works with Redis as a data store.
 """
 import os
+import json
 import logging
 import subprocess
-import app.auth_utils as app_utils
 
 
 from functools import wraps
@@ -17,19 +17,20 @@ class Cache:
     current_name = str()
     is_cleaning = False
 
-    def __init__(self, key_prefix='key_', name='cache', item_hash_field='attributes', default_expiration=1800):
+    def __init__(self, storage_file, key_prefix='key_', name='cache', item_hash_field='attributes', default_expiration=1800):
         """
         default_expiration: the default expiration time of a key in cache in minutes.
         name: the name of the Redis ordered set used by the cache.
         key_prefix: prefix to the expiration key.
         item_hash_field: static key pointing to the nested dict in the hash.
-        (hash -> {'hash_key': {'attributes': {your_data}}})
+        (hash -> {'hash_key': {'item_hash_field': {your_data}}})
         NOTE: while the cache is empty, this ordered set is not defined.
         """
         self.name = name
         self.default_expiration = default_expiration
         self.key_prefix = key_prefix
         self.item_hash_field = item_hash_field
+        self.storage_file = storage_file
 
         if not self.is_cleaning:
             path = os.getcwd() + '/cache_cleaner.py'
@@ -43,7 +44,7 @@ class Cache:
 
     def get_cache(self):
         """
-        This function returns all items currently active in the cache in a list.
+        This function returns all hash keys currently active in the cache in a list.
         """
         data_store_list = redis_utils.decode_bytelist(redis_utils.zrange(self.name))
         return data_store_list
@@ -153,9 +154,17 @@ class Cache:
         If unsuccessful it will return False.
         """
         try:
-            hash_data = app_utils.get_json_from_file(hash_name)
-            status = redis_utils.hset(hash_name, hash_data[hash_name][self.item_hash_field])
-            return status
+            with open(self.storage_file, 'r') as input_file:
+                for line in input_file:
+                    if line == '\n':
+                        pass
+
+                    elif hash_name in line:
+                        data_to_set = json.loads(line)
+                        break
+
+                redis_utils.hset(hash_name, data_to_set[hash_name][self.item_hash_field])
+                return True
 
         except Exception as message:
             logging.log(logging.ERROR, str(message))
@@ -279,7 +288,7 @@ class Cache:
 
         return decorator
 
-    def update(self):
+    def update(self, data_to_set):
         """
         This decorator updates the value of the cached hash data.
         NOTE! New data must be written in the data storage first.

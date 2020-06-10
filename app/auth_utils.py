@@ -1,12 +1,28 @@
 import os
 import json
 import secrets
+
+import flask
 import logging
 
+from app.config import cache
 from werkzeug.security import generate_password_hash, check_password_hash
 
 users_file = os.getcwd() + '/local_storage/users.txt'
 group_file = os.getcwd() + '/local_storage/groups.txt'
+
+
+def check_password(username, password):
+    try:
+        user_data = get_json_from_file(username)
+        user_pass = user_data[username]['attributes']['password']
+
+        if check_key(user_pass, password):
+            return True
+
+    except Exception as message:
+        response = flask.make_response(flask.redirect(f'/', ), 401, )
+        return response
 
 
 def secure_key(key=str()):
@@ -27,7 +43,7 @@ def check_key(encrypted_key=str(), input_key=str()):
     return bingo
 
 
-def append_json_to_file(json_data_input):
+def append_json_to_file(json_data):
     """
     json_data -> data to write(dict)
     Writes the given data to the file on a new line.
@@ -36,11 +52,9 @@ def append_json_to_file(json_data_input):
     """
 
     try:
-        json_data_output = set_api_key(json_data_input)
-
         with open(users_file, 'a') as output_file:
             output_file.write("\n")
-            json.dump(json_data_output, output_file)
+            json.dump(json_data, output_file)
             return True
 
     except Exception as message:
@@ -144,15 +158,14 @@ def update_group(group, new_values):
         return False
 
 
-def set_api_key(json_data):
+def refresh_api_key(json_data):
     try:
         nested_dict = list(json_data.values())[0]
         user_key = list(json_data.keys())[0]
         user_data_key = list(nested_dict.keys())[0]
         api_key = secrets.token_urlsafe()
 
-        if not get_api_key(user_key):
-            nested_dict[user_data_key].update({'API_KEY': api_key})
+        nested_dict[user_data_key].update({'API_KEY': api_key})
 
         output_json = {user_key: nested_dict}
 
@@ -161,6 +174,11 @@ def set_api_key(json_data):
     except Exception as message:
         logging.log(logging.ERROR, str(message))
         return False
+
+
+def generate_api_key():
+    api_key = secrets.token_urlsafe(16)
+    return api_key
 
 
 def get_api_key(json_key):
@@ -176,3 +194,14 @@ def get_api_key(json_key):
         logging.log(logging.ERROR, str(message))
         return False
 
+
+# IN PROGRESS
+def check_api_key(username, api_key):
+    try:
+        user_data = get_json_from_file(username)
+        user_api_key = user_data[username][cache.item_hash_field]['API_KEY']
+        get_api_key(username)
+
+    except Exception as message:
+        logging.log(logging.INFO, str(message))
+        return False

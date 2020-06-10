@@ -32,7 +32,12 @@ class UpdateForm(FlaskForm):
     username = StringField('Username')
     name = StringField('Name')
     email = StringField('Email')
-    password = PasswordField('Password')
     group = StringField('Group')
 
-    submit = SubmitField('Update')
+    submit_info = SubmitField('Update_Info')
+
+    old_password = PasswordField('Old_Password')
+    new_password = PasswordField('New_Password')
+
+    submit_pass = SubmitField('Update_Password')
+

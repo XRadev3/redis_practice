@@ -1,2 +1,2 @@
 
-{"test_user": {"attributes": {"name": "Ivan Ivanov", "email": "asdfadsfa@asda", "password": "pbkdf2:sha256:150000$qLrlI1S5$8b27b948f03535ebcbc1d18cee6ea3585378318b5c96d2441adf8cdc2da9b441", "group": "basic", "API_KEY": "ejcCcSPESvwfioB8Q7fyDHDIEh9YRem99vwg2eKKneY"}}}
+{"test_user": {"attributes": {"name": "Ivan Ivanov", "email": "123123@adsa.com", "password": "pbkdf2:sha256:150000$hJuYikdw$535503911b86e893d14b634e420aa265381ffa2e89cc385feec012b72471dcd6", "group": "basic", "API_KEY": "WRnwpot2EBSgA4jBmRJ-4w"}}}

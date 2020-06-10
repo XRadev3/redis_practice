@@ -4,7 +4,7 @@ import functools
 
 from app.cache import Cache
 
-cache = Cache()
+cache = Cache(os.getcwd() + '/local_storage/users.txt')
 
 
 @functools.lru_cache()
@@ -26,7 +26,6 @@ def get_app_conf():
         'FLASK_ENV': application_data['FLASK_ENV'],
         'FLASK_DEBUG': application_data['FLASK_DEBUG']
     }
-    set_logging()
 
     return app_conf
 

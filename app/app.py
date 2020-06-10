@@ -3,10 +3,10 @@
 # This program is made for the sole purpose of practicing Redis w/ python.
 
 import flask
+import app.auth_utils as auth_utils
 
-from app import auth_utils
 from app.forms import *
-from app.auth import require_auth, check_password
+from app.auth import require_auth
 from app.config import get_app_conf, cache
 from redis_utils import redis_utils as redis_utils
 from flask import render_template, flash, session
@@ -43,7 +43,7 @@ def login_form():
         pass
 
     if form.validate_on_submit():
-        if check_password(form.username.data, form.password.data):
+        if auth_utils.check_password(form.username.data, form.password.data):
             session['username'] = form.username.data
 
             @cache.memorize()
@@ -64,7 +64,7 @@ def login_form():
 @require_auth
 @cache.release()
 def logout():
-    return flask.redirect('/')
+    return flask.redirect(f'/')
 
 
 @app.route("/register", methods=['GET', 'POST'])
@@ -78,7 +78,8 @@ def register():
             'name': form.name.data,
             'email': form.email.data,
             'password': auth_utils.secure_key(form.password.data),
-            'group': 'basic'
+            'group': 'basic',
+            'API_KEY': auth_utils.generate_api_key()
         }
 
         if auth_utils.get_json_from_file(form.username.data):
@@ -89,7 +90,7 @@ def register():
 
         if status:
             flask.flash("Successfully registered!")
-            return flask.redirect('/login', 201)
+            return flask.redirect(f'/login', 201)
 
     return render_template("register.html", title=title, form=form)
 
@@ -106,7 +107,8 @@ def create_user():
             'name': form.name.data,
             'email': form.email.data,
             'password': form.password.data,
-            'group': form.group.data
+            'group': form.group.data,
+            'API_KEY': auth_utils.generate_api_key()
         }
 
         if auth_utils.append_json_to_file({form.username.data: {'attributes': user_data_dict}}):
@@ -121,7 +123,7 @@ def update_user():
     form = UpdateForm()
     title = "User customization."
     username = session['username']
-    hash_field = "attributes"
+    hash_field = cache.item_hash_field
     user_hash = auth_utils.get_json_from_file(username)
     user_data = user_hash[username]
 
@@ -131,18 +133,36 @@ def update_user():
         form.username.data = username
         form.name.data = user_data[hash_field]['name']
         form.email.data = user_data[hash_field]['email']
-        form.password.data = user_data[hash_field]['password']
         form.group.data = user_data[hash_field]['group']
 
     else:
-        user_data_dict = {
-            'name': form.name.data,
-            'email': form.email.data,
-            'password': auth_utils.secure_key(form.password.data),
-            'group': user_data[hash_field]['group']
-        }
-        if auth_utils.del_json_from_file(username) and auth_utils.append_json_to_file({username: {'attributes': user_data_dict}}):
-            @cache.update()
+        if form.submit_info.data:
+            user_data_dict = {
+                'name': form.name.data,
+                'email': form.email.data,
+                'password': user_data[hash_field]['password'],
+                'group': user_data[hash_field]['group'],
+                'API_KEY': user_data[hash_field]['API_KEY']
+            }
+
+        else:
+            if auth_utils.check_password(username, form.old_password.data):
+                user_data_dict = {
+                    'name': user_data[hash_field]['name'],
+                    'email': user_data[hash_field]['email'],
+                    'password': auth_utils.secure_key(form.new_password.data),
+                    'group': user_data[hash_field]['group'],
+                    'API_KEY': user_data[hash_field]['API_KEY']
+                }
+
+            else:
+                flask.flash("Wrong password!")
+                return render_template("update_base.html", title=title, form=form)
+
+        register_data = {username: {'attributes': user_data_dict}}
+        if auth_utils.del_json_from_file(username) and auth_utils.append_json_to_file(register_data):
+
+            @cache.update(register_data)
             def call_cache():
                 flask.flash("Successfully updated!")
                 return flask.redirect(f'/user/home_page')
@@ -157,6 +177,7 @@ def update_user():
 
 @app.route("/user/groups", methods=['GET', 'POST'])
 def update_groups():
+
     return False
 
 
