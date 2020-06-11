@@ -33,11 +33,36 @@ def require_auth(view_function):
     return decorated_function
 
 
-def rate_limiter():
-    try:
+def require_apikey(view_function):
+    @wraps(view_function)
+    def decorator(*args, **kwargs):
+        try:
+            if auth_utils.check_api_key_exists(flask.request.headers['API_KEY']):
+                if not rate_limiter(agent=True):
+                    return view_function(*args, **kwargs)
+
+                else:
+                    return {"data": "You have made too much requests!", "status": 401}
+
+        except Exception as message:
+            return flask.abort(401)
+
+        return flask.abort(401)
+
+    return decorator
+
+
+def rate_limiter(agent=False):
+    if not agent:
         username = flask.session['username']
-        now = datetime.datetime.now()
         api_key = auth_utils.get_api_key(username)
+    else:
+        api_key = flask.request.headers['API_KEY']
+        item_data = auth_utils.get_json_from_file('', api_key)
+        username = list(item_data.keys())[0]
+
+    try:
+        now = datetime.datetime.now()
         redis_key_per_minute = api_key + "-" + str(now.minute)
         redis_key_hourly = api_key + "-" + str(now.hour) + "-hour"
         user_group_limits = auth_utils.get_group_info(redis_utils.hget(username, auth_utils.cache.item_hash_field))
@@ -63,3 +88,7 @@ def rate_limiter():
     except Exception as message:
         logging.log(logging.ERROR, str(message))
         return False
+    #
+    # finally:
+    #     import pdb;pdb.set_trace()
+    #     print('hi')

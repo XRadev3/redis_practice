@@ -10,10 +10,7 @@ set_name = "cache"
 key_pattern = "key*"
 hash_field = "attributes"
 log_path = os.getcwd() + '/../cache_cleaner.log'
-logging.basicConfig(format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-                    datefmt='%Y-%m-%d:%H:%M:%S',
-                    filename=log_path,
-                    level=logging.DEBUG)
+logging.basicConfig(filename=log_path, level=logging.DEBUG)
 
 logging.log(logging.INFO, "LOG CLEANER INITIATED!")
 

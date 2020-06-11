@@ -34,10 +34,10 @@ class UpdateForm(FlaskForm):
     email = StringField('Email')
     group = StringField('Group')
 
-    submit_info = SubmitField('Update_Info')
+    submit_info = SubmitField('Update info')
 
-    old_password = PasswordField('Old_Password')
-    new_password = PasswordField('New_Password')
+    old_password = PasswordField('Old password')
+    new_password = PasswordField('New password')
 
-    submit_pass = SubmitField('Update_Password')
+    submit_pass = SubmitField('Update password')
 

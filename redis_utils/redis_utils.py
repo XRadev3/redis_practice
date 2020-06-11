@@ -19,8 +19,6 @@ def hset(hash_name, hash_map):
     """
 
     try:
-        import pdb;pdb.set_trace()
-        print('hi')
         r_hash = r_cli.hset(name=hash_name, mapping={'attributes': str(hash_map)})
         if r_hash:
             return True

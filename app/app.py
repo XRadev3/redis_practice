@@ -6,19 +6,23 @@ import flask
 import app.auth_utils as auth_utils
 
 from app.forms import *
-from app.auth import require_auth
+from app.auth import require_auth, require_apikey
 from app.config import get_app_conf, cache
 from redis_utils import redis_utils as redis_utils
 from flask import render_template, flash, session
-
 
 app = flask.Flask(__name__)
 app.config.update(get_app_conf())
 
 
-@app.route("/temp")
-def temp_route():
-    return str(auth_utils.get_api_key('test_user'))
+@app.route("/ping")
+@require_apikey
+def ping():
+    print('hi')
+    temp_response = flask.make_response(flask.render_template('base.html'))
+    temp_response.headers['data_size'] = 500
+    temp_response.status_code = 200
+    return temp_response
 
 
 @app.route("/")
@@ -37,7 +41,7 @@ def login_form():
     title = 'Redis Login'
     try:
         if session['username']:
-            return flask.redirect(f"/user/home_page")
+            return flask.redirect('/user/home_page')
 
     except Exception as message:
         pass
@@ -49,7 +53,7 @@ def login_form():
             @cache.memorize()
             @cache.evict()
             def call_cache():
-                return flask.redirect(f'/user/home_page')
+                return flask.redirect('/user/home_page')
 
             return call_cache()
 
@@ -64,11 +68,10 @@ def login_form():
 @require_auth
 @cache.release()
 def logout():
-    return flask.redirect(f'/')
+    return flask.redirect('/')
 
 
 @app.route("/register", methods=['GET', 'POST'])
-@cache.evict()
 def register():
     form = RegisterForm()
     title = "Register"
@@ -90,7 +93,7 @@ def register():
 
         if status:
             flask.flash("Successfully registered!")
-            return flask.redirect(f'/login', 201)
+            return flask.redirect('/login', 201)
 
     return render_template("register.html", title=title, form=form)
 
@@ -106,19 +109,20 @@ def create_user():
         user_data_dict = {
             'name': form.name.data,
             'email': form.email.data,
-            'password': form.password.data,
+            'password': auth_utils.secure_key(form.password.data),
             'group': form.group.data,
             'API_KEY': auth_utils.generate_api_key()
         }
 
         if auth_utils.append_json_to_file({form.username.data: {'attributes': user_data_dict}}):
-            return flask.redirect(f'/user/home_page')
+            return flask.redirect('/user/home_page')
 
     return render_template("create_user.html", title=title, form=form)
 
 
 @app.route("/user/update", methods=['GET', 'POST'])
 @cache.is_hit()
+@require_auth
 def update_user():
     form = UpdateForm()
     title = "User customization."
@@ -165,7 +169,8 @@ def update_user():
             @cache.update(register_data)
             def call_cache():
                 flask.flash("Successfully updated!")
-                return flask.redirect(f'/user/home_page')
+                return flask.redirect('/user/home_page')
+
             call_cache()
 
         else:
@@ -177,7 +182,6 @@ def update_user():
 
 @app.route("/user/groups", methods=['GET', 'POST'])
 def update_groups():
-
     return False
 
 
@@ -189,7 +193,7 @@ def user_page():
     data = redis_utils.hget(session['username'], 'attributes')
     data = data['name']
 
-    return render_template("user_home.html", title=title, name=data)
+    return render_template('user_home.html', title=title, name=data)
 
 
 @app.route("/redis/clear")
@@ -197,3 +201,11 @@ def clear_redis():
     redis_utils.flushall()
 
     return "Memory has been cleared! \n Cron jobs have been stopped!"
+
+
+@app.after_request
+def after_each_request(response):
+    import pdb;pdb.set_trace()
+    print('hi')
+
+    return response

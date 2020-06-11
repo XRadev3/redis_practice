@@ -26,7 +26,7 @@ def get_app_conf():
         'FLASK_ENV': application_data['FLASK_ENV'],
         'FLASK_DEBUG': application_data['FLASK_DEBUG']
     }
-
+    set_logging()
     return app_conf
 
 

@@ -2,7 +2,6 @@ import os
 import json
 import secrets
 
-import flask
 import logging
 
 from app.config import cache
@@ -13,6 +12,10 @@ group_file = os.getcwd() + '/local_storage/groups.txt'
 
 
 def check_password(username, password):
+    """
+    Asserts if the given password is equal to the actual password.
+    Returns True if successful, otherwise it will redirect the client to the index page.
+    """
     try:
         user_data = get_json_from_file(username)
         user_pass = user_data[username]['attributes']['password']
@@ -21,8 +24,7 @@ def check_password(username, password):
             return True
 
     except Exception as message:
-        response = flask.make_response(flask.redirect(f'/', ), 401, )
-        return response
+        return False
 
 
 def secure_key(key=str()):
@@ -86,12 +88,14 @@ def del_json_from_file(key):
         return False
 
 
-def get_json_from_file(key):
+def get_json_from_file(key, api_key=str()):
     """
     key -> dict key(string)
     Returns a line from a file the holds the given key,
     otherwise False.
     """
+    if api_key:
+        key = api_key
 
     try:
         with open(users_file, 'r') as input_file:
@@ -159,6 +163,11 @@ def update_group(group, new_values):
 
 
 def refresh_api_key(json_data):
+    """
+    Refreshes the current API_KEY set to the user data.
+    If successful returns dict with the user data and updated API_KEY,
+    otherwise returns False.
+    """
     try:
         nested_dict = list(json_data.values())[0]
         user_key = list(json_data.keys())[0]
@@ -177,11 +186,20 @@ def refresh_api_key(json_data):
 
 
 def generate_api_key():
+    """
+    Generates a secure API_KEY.
+    Returns the generated string.
+    """
     api_key = secrets.token_urlsafe(16)
     return api_key
 
 
 def get_api_key(json_key):
+    """
+    Reads the user data from the storage and returns the API_KEY.
+    If successful returns string,
+    otherwise returns False.
+    """
     try:
         json_data = get_json_from_file(json_key)
         nested_dict = list(json_data.values())[0]
@@ -196,11 +214,12 @@ def get_api_key(json_key):
 
 
 # IN PROGRESS
-def check_api_key(username, api_key):
+def check_api_key_exists(api_key):
     try:
-        user_data = get_json_from_file(username)
-        user_api_key = user_data[username][cache.item_hash_field]['API_KEY']
-        get_api_key(username)
+        with open(users_file, 'r') as input_file:
+            for line in input_file:
+                if api_key in line:
+                    return True
 
     except Exception as message:
         logging.log(logging.INFO, str(message))

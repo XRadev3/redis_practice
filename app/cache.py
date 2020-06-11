@@ -253,7 +253,7 @@ class Cache:
                     if session['username']:
                         key = self.key_prefix + session['username']
                         redis_utils.set_expiration(key, self.default_expiration)
-                        redis_utils.zincrby_to_highest(self.name, key, True)
+                        redis_utils.zincrby_to_highest(self.name, redis_utils.get_key(key), True)
 
                     return fn(*args, **kwargs)
 
