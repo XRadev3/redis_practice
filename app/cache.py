@@ -226,18 +226,19 @@ class Cache:
             @wraps(fn)
             def inner(*args, **kwargs):
                 username = session['username']
-                try:
-                    score_to_set = redis_utils.get_ordered_set_details(self.name) + 1
-                    self.set_expiration_key(username)
-                    self.set_os(username, score_to_set)
-                    self.set_hash(username)
+                if not redis_utils.get_key(self.key_prefix + username):
+                    try:
+                        score_to_set = redis_utils.get_ordered_set_details(self.name) + 1
+                        self.set_expiration_key(username)
+                        self.set_os(username, score_to_set)
+                        self.set_hash(username)
 
-                    return fn(*args, **kwargs)
+                        return fn(*args, **kwargs)
 
-                except Exception as message:
-                    response = make_response(redirect('/', ), 404, )
-                    return response
-
+                    except Exception as message:
+                        response = make_response(redirect('/', ), 404, )
+                        return response
+                return fn(*args, **kwargs)
             return inner
         return decoratior
 

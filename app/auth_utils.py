@@ -118,14 +118,13 @@ def get_group_info(user_data=dict(), all_groups=False):
     """
     user_data -> dict(string)
     Returns the key value pairs of a group
-    or if all_groups is True, all groups.
-    otherwise False.
+    or if all_groups is True, returns all the groups,
+    otherwise returns False.
     """
     try:
         with open(group_file, 'r') as text_file:
             line = text_file.readline()
             read_data = json.loads(line)
-
             if all_groups:
                 return read_data
 
@@ -213,12 +212,16 @@ def get_api_key(json_key):
         return False
 
 
-# IN PROGRESS
-def check_api_key_exists(api_key):
+def check_api_key_exists(api_key, get_owner=False):
     try:
         with open(users_file, 'r') as input_file:
             for line in input_file:
                 if api_key in line:
+                    if get_owner:
+                        json_data = json.loads(line)
+                        user_key = list(json_data.keys())[0]
+                        return user_key
+
                     return True
 
     except Exception as message:
