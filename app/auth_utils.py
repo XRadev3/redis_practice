@@ -14,7 +14,8 @@ group_file = os.getcwd() + '/local_storage/groups.txt'
 def check_password(username, password):
     """
     Asserts if the given password is equal to the actual password.
-    Returns True if successful, otherwise it will redirect the client to the index page.
+    Returns True if successful,
+    otherwise returns False.
     """
     try:
         user_data = get_json_from_file(username)
@@ -38,7 +39,7 @@ def secure_key(key=str()):
 
 def check_key(encrypted_key=str(), input_key=str()):
     """
-    Checks if the given encrypted_key is equal ot the decrypted input_key.
+    Checks if the given encrypted_key is equal ot the decrypted input_key, if so, returns True.
     Returns False if the keys are different.
     """
     bingo = check_password_hash(encrypted_key, input_key)
@@ -88,7 +89,7 @@ def del_json_from_file(key):
         return False
 
 
-def get_json_from_file(key, api_key=str()):
+def get_json_from_file(key=str(), api_key=str(), all_items=False):
     """
     key -> dict key(string)
     Returns a line from a file the holds the given key,
@@ -99,16 +100,22 @@ def get_json_from_file(key, api_key=str()):
 
     try:
         with open(users_file, 'r') as input_file:
+            if all_items:
+                item_dict = dict()
+                for line in input_file:
+                    if line != "\n":
+                        item_dict.update(json.loads(line))
+
+                return item_dict
 
             for line in input_file:
-                if line == "\n":
-                    pass
-                elif key in line:
+                if line != "\n" and key in line:
                     json_data = json.loads(line)
+
                     return json_data
 
     except Exception as message:
-        logging.log(logging.ERROR, str(message))
+        logging.log(logging.CRITICAL, str(message))
         return False
 
     return False

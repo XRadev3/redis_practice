@@ -130,12 +130,11 @@ class Cache:
             logging.log(logging.ERROR, str(message))
             return False
 
-    def rem_key(self):
+    def rem_key(self, username):
         """
         This function deletes a key and it's instance in the ordered set as well as the hash data.
         """
         try:
-            username = session['username']
             key = self.key_prefix + username
             redis_utils.zrem(self.name, username)
             redis_utils.rem_key(key)
@@ -205,7 +204,7 @@ class Cache:
 
             @wraps(fn)
             def inner(*args, **kwargs):
-                if self.rem_key():
+                if self.rem_key(session['username']):
                     session.pop('username', None)
                 else:
                     redirect("/", 404)

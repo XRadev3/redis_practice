@@ -41,3 +41,6 @@ class UpdateForm(FlaskForm):
 
     submit_pass = SubmitField('Update password')
 
+
+class DeleteForm(FlaskForm):
+    submit = SubmitField('Delete')

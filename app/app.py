@@ -25,7 +25,7 @@ def ping():
 
 
 @app.route("/")
-def index_page():
+def index():
     response = flask.make_response()
     try:
         if session['username']:
@@ -39,13 +39,13 @@ def index_page():
 
 
 @app.route("/login", methods=['GET', 'POST'])
-def login_form():
+def login():
     form = LoginForm()
     title = 'Redis Login'
     response = flask.make_response()
     try:
         if session['username']:
-            response.data = flask.redirect('/user/home_page')
+            response.data = render_template("user_home.html", name=session['username'])
             response.status_code = 302
 
             return response
@@ -60,7 +60,8 @@ def login_form():
             @cache.memorize()
             @cache.evict()
             def call_cache():
-                response.data = flask.redirect('/user/home_page')
+                flask.flash("We are glad to see you again.")
+                response.data = render_template('user_home.html', name=session['username'])
                 response.headers['data_size'] = 0
                 response.status_code = 302
 
@@ -86,11 +87,8 @@ def login_form():
 @require_auth
 @cache.release()
 def logout():
-    response = flask.make_response()
-    response.data = flask.redirect('/')
-    response.status_code = 200
-
-    return response
+    flask.flash("Bye, it was nice to see you!")
+    return flask.redirect(flask.url_for('index'), 200)
 
 
 @app.route("/register", methods=['GET', 'POST'])
@@ -119,9 +117,9 @@ def register():
 
         if status:
             flask.flash("Successfully registered!")
-            response.data = flask.redirect('/login', 201)
+            response.data = render_template('base_logged.html', title='Welcome')
             response.headers['data_size'] = 0
-            response.status_code = 200
+            response.status_code = 201
 
             return response
 
@@ -141,6 +139,7 @@ def create_user():
 
     if form.validate_on_submit():
         user_data_dict = {
+            'nickname': form.name.data,
             'name': form.name.data,
             'email': form.email.data,
             'password': auth_utils.secure_key(form.password.data),
@@ -149,7 +148,8 @@ def create_user():
         }
 
         if auth_utils.append_json_to_file({form.username.data: {'attributes': user_data_dict}}):
-            response.data = flask.redirect('/user/home_page')
+            flask.flash("User: {}, was successfully created".format)
+            response.data = render_template('user_home.html', name=session['username'])
             response.headers['data_size'] = 100
             response.status_code = 201
 
@@ -203,7 +203,7 @@ def update_user():
 
             else:
                 flask.flash("Wrong password!")
-                response.data = render_template("update_base.html", title=title, form=form)
+                response.data = render_template("update_user.html", title=title, form=form)
                 response.headers['data_size'] = 0
                 response.status_code = 200
 
@@ -215,7 +215,7 @@ def update_user():
             @cache.update(register_data)
             def call_cache():
                 flask.flash("Successfully updated!")
-                response.data = flask.redirect('/user/home_page')
+                response.data = render_template('user_home.html', name=form.name.data)
                 response.headers['data_size'] = 0
                 response.status_code = 201
 
@@ -224,12 +224,12 @@ def update_user():
             call_cache()
 
         else:
-            response.data = flask.redirect('/')
+            response.data = render_template('base.html')
             response.status_code = 401
 
             return response
 
-    response.data = render_template("update_base.html", title=title, form=form)
+    response.data = render_template("update_user.html", title=title, form=form)
     response.status_code = 200
 
     return response
@@ -238,6 +238,36 @@ def update_user():
 @app.route("/user/groups", methods=['GET', 'POST'])
 def update_groups():
     return False
+
+
+@app.route("/user/delete", methods=['GET', 'POST'])
+# @cache.is_hit()
+# @require_auth
+def del_user():
+    check = True
+    form = DeleteForm()
+    all_users = auth_utils.get_json_from_file(all_items=True)
+    response = flask.make_response()
+
+    if form.validate_on_submit():
+        if check: #auth_utils.del_json_from_file(flask.request.form["dropdown"]):
+            # cache.rem_key(flask.request.form["dropdown"])
+            flask.flash("User: {}, was successfully removed!".format(flask.request.form["dropdown"]))
+
+            response.data = render_template('delete_user.html', all_users=all_users, form=form)
+            response.headers['data_size'] = 50
+            response.status_code = 204
+
+            return response
+
+        flask.flash("Something went wrong... please try again.")
+        response.data = render_template('delete_user.html', all_users=all_users, form=form)
+        response.headers['data_size'] = 0
+        response.status_code = 500
+
+        return response
+
+    return render_template('delete_user.html', all_users=all_users, form=form)
 
 
 @app.route("/user/home_page")

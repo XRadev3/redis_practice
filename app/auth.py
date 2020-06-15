@@ -16,7 +16,7 @@ def require_auth(view_function):
             if redis_utils.key_exists(expiration_key):
 
                 if not rate_limiter():
-                    response = flask.make_response(flask.redirect(f'/', ), 401, )
+                    response = flask.make_response(flask.redirect(flask.url_for('index')), 401, )
                     return response
 
                 return view_function(*args, **kwargs)
@@ -27,7 +27,7 @@ def require_auth(view_function):
 
         except Exception as message:
             logging.log(logging.INFO, str(message))
-            response = flask.make_response(flask.redirect(f'/', ), 401, )
+            response = flask.make_response(flask.redirect(flask.url_for('index')), 401, )
             return response
 
     return decorated_function
@@ -41,7 +41,7 @@ def require_apikey(view_function):
                 flask.session['username'] = auth_utils.check_api_key_exists(flask.request.headers['API_KEY'], True)
 
                 if not rate_limiter():
-                    return {"data": "You have made too much requests!", "status": 401}
+                    return {"data": flask.get_flashed_messages()[0], "status": 401}
 
                 else:
                     return view_function(*args, **kwargs)
@@ -104,25 +104,25 @@ def rate_limiter():
         now = datetime.datetime.now()
         redis_key_per_minute = api_key + "-" + str(now.minute)
         redis_key_hourly = api_key + "-" + str(now.hour) + "-hour"
-        traffic_key_per_hourly = api_key + "-" + str(now.hour) + "-hourly_traffic"
+        traffic_key_hourly = api_key + "-" + str(now.hour) + "-hourly_traffic"
 
         user_group_limits = auth_utils.get_group_info(auth_utils.get_json_from_file(username)[username][auth_utils.cache.item_hash_field])
 
         n_rq_per_minute = redis_utils.get_key(redis_key_per_minute)
         n_rq_hourly = redis_utils.get_key(redis_key_hourly)
-        user_traffic_hourly = redis_utils.get_key(traffic_key_per_hourly)
+        user_traffic_hourly = redis_utils.get_key(traffic_key_hourly)
 
         logging.log(10, 'Checked')
 
-        if int(user_traffic_hourly) > user_group_limits['traffic'] and user_traffic_hourly:
+        if int(user_traffic_hourly) >= user_group_limits['traffic'] and user_traffic_hourly:
             flask.flash('You have reached the data limit. Please wait an hour before making any more. OR buy our premium membership, just pay in the next hour and you will recieve 20% discount!!!')
             return False
 
-        elif int(n_rq_hourly) > user_group_limits['requests']*10 and n_rq_hourly:
+        elif int(n_rq_hourly) >= user_group_limits['requests']*10 and n_rq_hourly:
             flask.flash('You have reached the maximum allowed requests per hour. Please wait an hour before making any more. OR buy our premium membership, just pay in the next hour and you will recieve 20% discount!!!')
             return False
 
-        elif int(n_rq_per_minute) > user_group_limits['requests'] and n_rq_per_minute:
+        elif int(n_rq_per_minute) >= user_group_limits['requests'] and n_rq_per_minute:
             flask.flash('You have reached the maximum allowed requests per minute. Please wait a minute before making any more. OR buy our premium membership, just pay in the next hour and you will recieve 20% discount!!!')
             return False
 

@@ -1,4 +1,2 @@
-
-{"test_user": {"attributes": {"name": "Ivan Ivanov", "email": "123123@adsa.com", "password": "pbkdf2:sha256:150000$hJuYikdw$535503911b86e893d14b634e420aa265381ffa2e89cc385feec012b72471dcd6", "group": "basic", "API_KEY": "WRnwpot2EBSgA4jBmRJ-4w"}}}
-{"test_user2": {"attributes": {"name": "Grigor Dimitrov", "email": "aasdfas@ASDA.COM", "password": "pbkdf2:sha256:150000$XY6XEVhw$d56486cae41cc33ad2d5a98d7cda215f133db162d25d8c2e246b4d7ee2be9ad2", "group": "basic", "API_KEY": "mZj4gNNH9JSrOu6huZCfaQ"}}}
 {"xradev": {"attributes": {"name": "Hristo Radev", "email": "asfdasdf123@afsda", "password": "pbkdf2:sha256:150000$6Vu4Z5lq$559cc3287f54575765094da9d7351d8924c94fbad2208e42a358be4656e1aeba", "group": "admin", "API_KEY": "b_hCFq9HbdRtFv6eYoSvHQ"}}}
+{"test_user": {"attributes": {"name": "Ivan Ivanov", "email": "123123@adsa.com", "password": "pbkdf2:sha256:150000$hJuYikdw$535503911b86e893d14b634e420aa265381ffa2e89cc385feec012b72471dcd6", "group": "basic", "API_KEY": "WRnwpot2EBSgA4jBmRJ-4w"}}}
