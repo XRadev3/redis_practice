@@ -5,7 +5,7 @@ import os
 
 python_dir = os.getcwd()
 python_path = python_dir + "/../venv/bin/python3"
-job_path = ' /home/hristo/virtualenvironments/personal_training/redis_practice/app/cache_cleaner.py >/dev/null 2>&1'
+job_path = ' /home/hristo/virtualenvironments/personal_training/redis_practice/application/cache_cleaner.py >/dev/null 2>&1'
 command = python_path + job_path
 
 

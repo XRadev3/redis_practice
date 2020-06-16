@@ -1,0 +1,46 @@
+{% extends "base_logged.html" %}
+
+{% block content %}
+    <h1>Update</h1>
+    <h2>Personal information</h2>
+    <form action="" method="post" novalidate>
+        {{ form.hidden_tag() }}
+        <p>
+            {{ form.username.label }}<br>
+            {{ form.username(size=32) }}
+        </p>
+        <p>
+            {{ form.name.label }}<br>
+            {{ form.name(size=32) }}
+        </p>
+        <p>
+            {{ form.email.label }}<br>
+            {{ form.email(size=32) }}
+        </p>
+        <p>
+            {{ form.group.label }}<br>
+            {{ form.group(size=32) }}
+        </p>
+        <p>{{ form.submit_info() }}</p>
+
+        <h2>Change Password</h2>
+        <p>
+            {{ form.old_password.label }}<br>
+            {{ form.old_password(size=32) }}
+        </p>
+        <p>
+            {{ form.new_password.label }}<br>
+            {{ form.new_password(size=32) }}
+        </p>
+        <p>
+            {{ form.new_password2.label }}<br>
+            {{ form.new_password2(size=32) }}
+            {% for error in form.new_password2.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+
+        <p>{{ form.submit_pass() }}</p>
+
+    </form>
+{% endblock %}

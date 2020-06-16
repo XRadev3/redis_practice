@@ -1,0 +1,29 @@
+{% extends "base_logged.html"%}
+
+{% block content %}
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+</head>
+<body>
+    <h1>All groups</h1>
+    {% if all_groups %}
+        <table style="width:100%" border="1px">
+            <tr>
+                <th>Type</th>
+                <th>Request limit</th>
+                <th>Traffic limit</th>
+            </tr>
+            {% for group in all_groups: %}
+            <tr>
+                <th>{{ group }}</th>
+                <th>{{ all_groups[group]["requests"] }}</th>
+                <th>{{ all_groups[group]["traffic"] }}</th>
+            </tr>
+            {% endfor %}
+        </table>
+    {% endif %}
+
+</body>
+
+{% endblock %}

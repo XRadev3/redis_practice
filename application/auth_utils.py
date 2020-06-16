@@ -1,14 +1,15 @@
 import os
 import json
+import flask
 import secrets
 
 import logging
 
-from app.config import cache
+from application.config import cache
 from werkzeug.security import generate_password_hash, check_password_hash
 
-users_file = os.getcwd() + '/local_storage/users.txt'
-group_file = os.getcwd() + '/local_storage/groups.txt'
+users_file = os.getcwd() + '/application/local_storage/users.txt'
+group_file = os.getcwd() + '/application/local_storage/groups.txt'
 
 
 def check_password(username, password):
@@ -22,6 +23,15 @@ def check_password(username, password):
         user_pass = user_data[username]['attributes']['password']
 
         if check_key(user_pass, password):
+            return True
+
+    except Exception as message:
+        return False
+
+
+def is_logged():
+    try:
+        if flask.session['username']:
             return True
 
     except Exception as message:
@@ -79,7 +89,7 @@ def del_json_from_file(key):
 
         with open(users_file, "w") as output_file:
             for line in lines:
-                if key not in line and line != "\n":
+                if line != "\n" and not in_dict(key, json.loads(line), check_key=True):
                     output_file.write(line)
 
         return True
@@ -89,15 +99,12 @@ def del_json_from_file(key):
         return False
 
 
-def get_json_from_file(key=str(), api_key=str(), all_items=False):
+def get_json_from_file(key=str(), all_items=False):
     """
     key -> dict key(string)
     Returns a line from a file the holds the given key,
     otherwise False.
     """
-    if api_key:
-        key = api_key
-
     try:
         with open(users_file, 'r') as input_file:
             if all_items:
@@ -111,8 +118,8 @@ def get_json_from_file(key=str(), api_key=str(), all_items=False):
             for line in input_file:
                 if line != "\n" and key in line:
                     json_data = json.loads(line)
-
-                    return json_data
+                    if in_dict(key, json_data) or in_dict(key, json_data, check_key=True):
+                        return json_data
 
     except Exception as message:
         logging.log(logging.CRITICAL, str(message))
@@ -175,14 +182,14 @@ def refresh_api_key(json_data):
     otherwise returns False.
     """
     try:
-        nested_dict = list(json_data.values())[0]
+        dict_to_check = list(json_data.values())[0]
         user_key = list(json_data.keys())[0]
-        user_data_key = list(nested_dict.keys())[0]
+        user_data_key = list(dict_to_check.keys())[0]
         api_key = secrets.token_urlsafe()
 
-        nested_dict[user_data_key].update({'API_KEY': api_key})
+        dict_to_check[user_data_key].update({'API_KEY': api_key})
 
-        output_json = {user_key: nested_dict}
+        output_json = {user_key: dict_to_check}
 
         return output_json
 
@@ -208,9 +215,9 @@ def get_api_key(json_key):
     """
     try:
         json_data = get_json_from_file(json_key)
-        nested_dict = list(json_data.values())[0]
-        user_data_key = list(nested_dict.keys())[0]
-        api_key = nested_dict[user_data_key]['API_KEY']
+        dict_to_check = list(json_data.values())[0]
+        user_data_key = list(dict_to_check.keys())[0]
+        api_key = dict_to_check[user_data_key]['API_KEY']
 
         return api_key
 
@@ -234,3 +241,42 @@ def check_api_key_exists(api_key, get_owner=False):
     except Exception as message:
         logging.log(logging.INFO, str(message))
         return False
+
+
+def in_dict(item_to_check, dict_to_check, check_key=False):
+    """
+    Iterates through a dictionary and its nested(two max) and checks if
+    item_to_check is present as a value or if check_key is given, a key.
+    Returns True if the variable is present, otherwise returns False.
+    """
+
+    # Main dictionary
+    for key in dict_to_check:
+        if check_key:
+            if item_to_check == key:
+                return True
+
+        elif item_to_check == dict_to_check[key]:
+            return True
+
+        # Nested dictionary
+        for nested_key in dict_to_check[key]:
+            if check_key:
+                if item_to_check == nested_key:
+                    return True
+
+            elif item_to_check == dict_to_check[key][nested_key]:
+                return True
+
+            # Nested in nested dictionary
+            for inner_key in dict_to_check[key][nested_key]:
+                if check_key:
+                    if item_to_check == inner_key:
+                        return True
+
+                elif item_to_check == dict_to_check[key][nested_key][inner_key]:
+                    return True
+
+    # If nothing is found, return False.
+    return False
+

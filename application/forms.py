@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import DataRequired
+from wtforms.validators import DataRequired, EqualTo
 
 
 class LoginForm(FlaskForm):
@@ -24,6 +24,7 @@ class RegisterForm(FlaskForm):
     name = StringField('Name', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
+    password2 = PasswordField('Repeat Password', validators=[DataRequired(), EqualTo('password')])
 
     submit = SubmitField('Register')
 
@@ -38,9 +39,14 @@ class UpdateForm(FlaskForm):
 
     old_password = PasswordField('Old password')
     new_password = PasswordField('New password')
+    new_password2 = PasswordField('Repeat new password', validators=[EqualTo('new_password')])
 
     submit_pass = SubmitField('Update password')
 
 
 class DeleteForm(FlaskForm):
     submit = SubmitField('Delete')
+
+
+class GroupForm(FlaskForm):
+    submit = SubmitField('Submit')

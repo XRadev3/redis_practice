@@ -1,7 +1,7 @@
-{% extends "base_logged.html" %}
+{% extends "base.html" %}
 
 {% block content %}
-    <h1>Update</h1>
+    <h1>Register</h1>
     <h2>Personal information</h2>
     <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
@@ -18,21 +18,16 @@
             {{ form.email(size=32) }}
         </p>
         <p>
-            {{ form.group.label }}<br>
-            {{ form.group(size=32) }}
-        </p>
-        <p>{{ form.submit_info() }}</p>
-
-        <h2>Update Password</h2>
-        <p>
-            {{ form.old_password.label }}<br>
-            {{ form.old_password(size=32) }}
+            {{ form.password.label }}<br>
+            {{ form.password(size=32) }}
         </p>
         <p>
-            {{ form.new_password.label }}<br>
-            {{ form.new_password(size=32) }}
+            {{ form.password2.label }}<br>
+            {{ form.password2(size=32) }}
+            {% for error in form.password2.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
         </p>
-        <p>{{ form.submit_pass() }}</p>
-
+        <p>{{ form.submit() }}</p>
     </form>
 {% endblock %}

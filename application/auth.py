@@ -2,7 +2,7 @@ import datetime
 import flask
 import logging
 
-from app import auth_utils
+from application import auth_utils
 from functools import wraps
 from redis_utils import redis_utils
 from werkzeug import exceptions as w_exceptions
@@ -27,8 +27,7 @@ def require_auth(view_function):
 
         except Exception as message:
             logging.log(logging.INFO, str(message))
-            response = flask.make_response(flask.redirect(flask.url_for('index')), 401, )
-            return response
+            return flask.redirect(flask.url_for('index'), 401)
 
     return decorated_function
 

@@ -3,11 +3,11 @@
 # This program is made for the sole purpose of practicing Redis w/ python.
 
 import flask
-import app.auth_utils as auth_utils
+import application.auth_utils as auth_utils
 
-from app.forms import *
-from app.auth import require_auth, require_apikey, increment_limiter
-from app.config import get_app_conf, cache
+from application.forms import *
+from application.auth import require_auth, require_apikey, increment_limiter
+from application.config import get_app_conf, cache
 from redis_utils import redis_utils as redis_utils
 from flask import render_template, flash, session
 
@@ -26,16 +26,12 @@ def ping():
 
 @app.route("/")
 def index():
-    response = flask.make_response()
-    try:
-        if session['username']:
-            response.headers['data_size'] = 0
-            response.data = render_template('base_logged.html')
-            return response
+    title = 'Index'
 
-    except Exception as message:
-        response.data = render_template('base.html')
-        return response
+    if auth_utils.is_logged():
+        return render_template('base_logged.html', title=title)
+
+    return render_template('base.html', title=title)
 
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -43,15 +39,9 @@ def login():
     form = LoginForm()
     title = 'Redis Login'
     response = flask.make_response()
-    try:
-        if session['username']:
-            response.data = render_template("user_home.html", name=session['username'])
-            response.status_code = 302
 
-            return response
-
-    except Exception as message:
-        pass
+    if auth_utils.is_logged():
+        return flask.redirect(flask.url_for('user_page'))
 
     if form.validate_on_submit():
         if auth_utils.check_password(form.username.data, form.password.data):
@@ -87,7 +77,7 @@ def login():
 @require_auth
 @cache.release()
 def logout():
-    flask.flash("Bye, it was nice to see you!")
+    flask.flash("Bye, it was nice seeing you!")
     return flask.redirect(flask.url_for('index'), 200)
 
 
@@ -111,17 +101,13 @@ def register():
             response.data = render_template("register.html", title=title, form=form)
             response.headers['data_size'] = 0
             response.status_code = 200
-            return response
-
-        status = auth_utils.append_json_to_file({form.username.data: {'attributes': user_data_dict}})
-
-        if status:
-            flask.flash("Successfully registered!")
-            response.data = render_template('base_logged.html', title='Welcome')
-            response.headers['data_size'] = 0
-            response.status_code = 201
 
             return response
+
+        if auth_utils.append_json_to_file({form.username.data: {'attributes': user_data_dict}}):
+            flask.flash("You have successfully registered!")
+
+            return flask.redirect(flask.url_for('index', code=302))
 
     response.data = render_template("register.html", title=title, form=form)
     response.status_code = 200
@@ -167,7 +153,7 @@ def create_user():
 def update_user():
     response = flask.make_response()
     form = UpdateForm()
-    title = "User customization."
+    title = "User customization"
     username = session['username']
     hash_field = cache.item_hash_field
     user_hash = auth_utils.get_json_from_file(username)
@@ -182,6 +168,7 @@ def update_user():
         form.group.data = user_data[hash_field]['group']
 
     else:
+        # Change user info.
         if form.submit_info.data:
             user_data_dict = {
                 'name': form.name.data,
@@ -191,23 +178,21 @@ def update_user():
                 'API_KEY': user_data[hash_field]['API_KEY']
             }
 
+        # Change password.
         else:
-            if auth_utils.check_password(username, form.old_password.data):
-                user_data_dict = {
-                    'name': user_data[hash_field]['name'],
-                    'email': user_data[hash_field]['email'],
-                    'password': auth_utils.secure_key(form.new_password.data),
-                    'group': user_data[hash_field]['group'],
-                    'API_KEY': user_data[hash_field]['API_KEY']
-                }
-
-            else:
-                flask.flash("Wrong password!")
-                response.data = render_template("update_user.html", title=title, form=form)
-                response.headers['data_size'] = 0
-                response.status_code = 200
-
+            if not auth_utils.check_password(username, form.old_password.data):
+                flask.flash("Incorrect password!")
+                response.status_code = 400
+                response.data = render_template('update_user.html', title=title, form=form)
                 return response
+
+            user_data_dict = {
+                'name': user_data[hash_field]['name'],
+                'email': user_data[hash_field]['email'],
+                'password': auth_utils.secure_key(form.new_password.data),
+                'group': user_data[hash_field]['group'],
+                'API_KEY': user_data[hash_field]['API_KEY']
+            }
 
         register_data = {username: {'attributes': user_data_dict}}
         if auth_utils.del_json_from_file(username) and auth_utils.append_json_to_file(register_data):
@@ -223,12 +208,6 @@ def update_user():
 
             call_cache()
 
-        else:
-            response.data = render_template('base.html')
-            response.status_code = 401
-
-            return response
-
     response.data = render_template("update_user.html", title=title, form=form)
     response.status_code = 200
 
@@ -237,26 +216,28 @@ def update_user():
 
 @app.route("/user/groups", methods=['GET', 'POST'])
 def update_groups():
-    return False
+    form = GroupForm()
+    title = "Manage groups"
+    all_groups = auth_utils.get_group_info(all_groups=True)
+    return render_template('update_groups.html', all_groups=all_groups, title=title, form=form)
 
 
 @app.route("/user/delete", methods=['GET', 'POST'])
-# @cache.is_hit()
-# @require_auth
+@cache.is_hit()
+@require_auth
 def del_user():
-    check = True
     form = DeleteForm()
     all_users = auth_utils.get_json_from_file(all_items=True)
     response = flask.make_response()
 
     if form.validate_on_submit():
-        if check: #auth_utils.del_json_from_file(flask.request.form["dropdown"]):
-            # cache.rem_key(flask.request.form["dropdown"])
+        if auth_utils.del_json_from_file(flask.request.form["dropdown"]):
+            all_users = auth_utils.get_json_from_file(all_items=True)
+            cache.rem_key(flask.request.form["dropdown"])
             flask.flash("User: {}, was successfully removed!".format(flask.request.form["dropdown"]))
-
             response.data = render_template('delete_user.html', all_users=all_users, form=form)
             response.headers['data_size'] = 50
-            response.status_code = 204
+            response.status_code = 202
 
             return response
 

@@ -33,7 +33,7 @@ class Cache:
         self.storage_file = storage_file
 
         if not self.is_cleaning:
-            path = os.getcwd() + '/cache_cleaner.py'
+            path = os.getcwd() + '/application/cache_cleaner.py'
 
             subprocess.Popen(
                 ['python3', path],
@@ -235,8 +235,8 @@ class Cache:
                         return fn(*args, **kwargs)
 
                     except Exception as message:
-                        response = make_response(redirect('/', ), 404, )
-                        return response
+                        return redirect('/', 404, )
+
                 return fn(*args, **kwargs)
             return inner
         return decoratior
