@@ -1,1 +1,1 @@
-{"basic": {"requests": 10, "traffic": 1000}, "plus": {"requests": 20, "traffic": 2000}, "premium": {"requests": 100, "traffic": 5000}, "admin": {"requests": 10000, "traffic": 4294967296}}
+{"basic": {"requests": 10, "traffic": 1000}, "plus": {"requests": 20, "traffic": 2000}, "premium": {"requests": 100, "traffic": 5000}, "admin": {"requests": 10000, "traffic": 4294967296}, "test": {"requests": 0, "traffic": 0}}

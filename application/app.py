@@ -219,6 +219,33 @@ def update_groups():
     form = GroupForm()
     title = "Manage groups"
     all_groups = auth_utils.get_group_info(all_groups=True)
+
+    if form.validate_on_submit():
+        group_name = flask.request.form.get("group_name")
+
+        if form.submit_cancel.data:
+            return render_template('update_groups.html', all_groups=all_groups, title=title, form=form)
+
+        elif form.submit_edit.data:
+            return render_template('update_groups.html', all_groups=all_groups, title=title, form=form)
+
+        elif form.submit_new.data:
+            return render_template('update_groups.html', all_groups=all_groups, title=title, form=form)
+
+        elif form.submit_update.data:
+            return render_template('update_groups.html', all_groups=all_groups, title=title, form=form)
+
+        elif form.submit_delete.data:
+            return render_template('update_groups.html', all_groups=all_groups, title=title, form=form)
+
+        elif form.submit_add.data:
+            flask.flash("Group created!")
+            new_group = {form.new_type.data: {"requests": form.new_request_limit.data, "traffic": form.new_traffic_limit.data}}
+            auth_utils.update_group(new_group=new_group)
+            all_groups = auth_utils.get_group_info(all_groups=True)
+
+            return render_template('update_groups.html', all_groups=all_groups, title=title, form=form)
+
     return render_template('update_groups.html', all_groups=all_groups, title=title, form=form)
 
 

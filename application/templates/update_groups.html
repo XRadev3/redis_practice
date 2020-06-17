@@ -8,22 +8,81 @@
 <body>
     <h1>All groups</h1>
     {% if all_groups %}
-        <table style="width:100%" border="1px">
-            <tr>
-                <th>Type</th>
-                <th>Request limit</th>
-                <th>Traffic limit</th>
-            </tr>
-            {% for group in all_groups: %}
-            <tr>
-                <th>{{ group }}</th>
-                <th>{{ all_groups[group]["requests"] }}</th>
-                <th>{{ all_groups[group]["traffic"] }}</th>
-            </tr>
-            {% endfor %}
-        </table>
-    {% endif %}
+        <form action="/user/groups" method="post" novalidate>
+            {{ form.hidden_tag() }}
+            {% if not form.validate_on_submit() %}
+                <table style="width:100%" border="1px">
+                    <tr>
+                        <th>Type</th>
+                        <th>Request limit</th>
+                        <th>Traffic limit</th>
+                        <th>Options</th>
+                    </tr>
+                    {% for group in all_groups: %}
+                    <tr>
+                        <td>{{ group }}</td>
+                        <td>{{ all_groups[group]["requests"] }}</td>
+                        <td>{{ all_groups[group]["traffic"] }}</td>
+                        <td>
+                            {{ form.submit_edit }}
+                            {{ form.submit_delete }}
+                            <input type="hidden" name="group_name" value="{{ group }}"/>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                        <th align="centre" colspan="4">{{ form.submit_new }}</th>
+                    </tr>
+                </table>
 
+            {% else %}
+                <table style="width:100%" border="1px">
+                    <tr>
+                        <td>Type</td>
+                        <td>Request limit</td>
+                        <td>Traffic limit</td>
+                        <td>Options</td>
+                    </tr>
+                    {% for group in all_groups: %}
+                        <tr>
+                            {% if form.submit_edit.data %}
+                                <td>{{ form.name }}</td>
+                                <td>{{ form.request_limit }}</td>
+                                <td>{{ form.traffic_limit }}</td>
+                                <td>
+                                    {{ form.submit_update }}
+                                    {{ form.submit_cancel }}
+                                </td>
+                            {% else %}
+                                <td>{{ group }}</td>
+                                <td>{{ all_groups[group]["requests"] }}</td>
+                                <td>{{ all_groups[group]["traffic"] }}</td>
+                                <td>
+                                    {{ form.submit_edit }}
+                                    {{ form.submit_delete }}
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                    {% if form.submit_new.data %}
+                        <tr>
+                            <td>{{ form.new_type }}</td>
+                            <td>{{ form.new_request_limit }}</td>
+                            <td>{{ form.new_traffic_limit }}</td>
+                            <td>
+                                {{ form.submit_add }}
+                                {{ form.submit_cancel }}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <th align="centre" colspan="4">{{ form.submit_new }}</th>
+                        </tr>
+                    {% endif %}
+                </table>
+            {% endif %}
+        </form>
+    {% endif %}
 </body>
 
 {% endblock %}

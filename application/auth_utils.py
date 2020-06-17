@@ -8,8 +8,8 @@ import logging
 from application.config import cache
 from werkzeug.security import generate_password_hash, check_password_hash
 
-users_file = os.getcwd() + '/application/local_storage/users.txt'
-group_file = os.getcwd() + '/application/local_storage/groups.txt'
+users_file = os.getcwd() + '/../application/local_storage/users.txt'
+group_file = os.getcwd() + '/../application/local_storage/groups.txt'
 
 
 def check_password(username, password):
@@ -150,11 +150,12 @@ def get_group_info(user_data=dict(), all_groups=False):
         return False
 
 
-def update_group(group, new_values):
+def update_group(group=str(), new_values=dict(), new_group=str()):
     """
     group -> dict key(string)
     new_values -> dict value(dict)
-    Updates a group's values.
+    new_group -> dictionary
+    Updates a group's values or if new_group is given, creates a new group.
     If successful, return True,
     otherwise False.
     """
@@ -162,6 +163,13 @@ def update_group(group, new_values):
         with open(group_file, 'r') as text_file:
             line = text_file.readline()
             line = json.loads(line)
+
+        if new_group:
+            line.update(new_group)
+            with open(group_file, 'w') as output_file:
+                output_file.write(json.dumps(line))
+
+            return True
 
         line[group] = new_values
 

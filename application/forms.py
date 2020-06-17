@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, IntegerField
 from wtforms.validators import DataRequired, EqualTo
 
 
@@ -49,4 +49,16 @@ class DeleteForm(FlaskForm):
 
 
 class GroupForm(FlaskForm):
-    submit = SubmitField('Submit')
+    name = StringField()
+    request_limit = StringField()
+    traffic_limit = StringField()
+    new_type = StringField()
+    new_request_limit = IntegerField()
+    new_traffic_limit = IntegerField()
+
+    submit_delete = SubmitField('Delete')
+    submit_edit = SubmitField('Edit')
+    submit_cancel = SubmitField('Cancel')
+    submit_new = SubmitField('New group')
+    submit_add = SubmitField('Save')
+    submit_update = SubmitField('Update')

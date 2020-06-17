@@ -4,7 +4,7 @@ import functools
 
 from application.cache import Cache
 
-cache = Cache(os.getcwd() + '/application/local_storage/users.txt')
+cache = Cache(os.getcwd() + '/../application/local_storage/users.txt')
 
 
 @functools.lru_cache()
@@ -42,7 +42,7 @@ def set_logging():
     configuration = app_data()
     if not configuration['LOGGING']:
         try:
-            path = os.getcwd() + '/app_log.log'
+            path = os.getcwd() + '/../app_log.log'
             logging.basicConfig(format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
                                 datefmt='%Y-%m-%d:%H:%M:%S',
                                 filename=path,
