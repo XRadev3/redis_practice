@@ -119,9 +119,11 @@ def register():
 @cache.is_hit()
 @cache.evict()
 def create_user():
+    title = "User creation panel."
+    username = session['username']
+    auth_utils.check_group(session['username'])
     response = flask.make_response()
     form = CreateUserForm()
-    title = "User creation panel."
 
     if form.validate_on_submit():
         user_data_dict = {
@@ -135,7 +137,7 @@ def create_user():
 
         if auth_utils.append_json_to_file({form.username.data: {'attributes': user_data_dict}}):
             flask.flash("User: {}, was successfully created".format)
-            response.data = render_template('user_home.html', name=session['username'])
+            response.data = render_template('user_home.html', name=username)
             response.headers['data_size'] = 100
             response.status_code = 201
 
@@ -195,6 +197,13 @@ def update_user():
             }
 
         register_data = {username: {'attributes': user_data_dict}}
+        import pdb;pdb.set_trace()
+        if register_data == user_hash:
+            flask.flash("Nothing to change...")
+            response.status_code = 304
+            response.data = render_template(render_template("update_user.html", title=title, form=form))
+            return response
+
         if auth_utils.del_json_from_file(username) and auth_utils.append_json_to_file(register_data):
 
             @cache.update(register_data)
@@ -218,6 +227,7 @@ def update_user():
 def update_groups():
     form = GroupForm()
     title = "Manage groups"
+    auth_utils.check_group(session['username'])
     all_groups = auth_utils.get_group_info(all_groups=True)
 
     if form.validate_on_submit():
@@ -254,6 +264,7 @@ def update_groups():
 @require_auth
 def del_user():
     form = DeleteForm()
+    auth_utils.check_group(session['username'])
     all_users = auth_utils.get_json_from_file(all_items=True)
     response = flask.make_response()
 
@@ -297,6 +308,7 @@ def user_page():
 @app.route("/redis/clear")
 def clear_redis():
     redis_utils.flushall()
+    auth_utils.check_group(session['username'])
     response = flask.make_response("Memory has been cleared!", 200)
     response.headers['data_size'] = 1000
 
@@ -318,5 +330,4 @@ def after_each_request(response):
 
     except Exception as message:
         return response
-
     return response

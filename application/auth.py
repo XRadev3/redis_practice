@@ -46,9 +46,9 @@ def require_apikey(view_function):
                     return view_function(*args, **kwargs)
 
         except Exception as message:
-            return flask.abort(401)
+            return flask.abort(flask.redirect(flask.url_for('index'), 401))
 
-        return flask.abort(401)
+        return flask.abort(flask.redirect(flask.url_for('index'), 401))
 
     return decorator
 
@@ -87,7 +87,7 @@ def increment_limiter(response):
 
     except Exception as message:
         logging.log(logging.ERROR, str(message))
-        flask.abort(401)
+        flask.abort(flask.redirect(flask.url_for('index'), 401))
 
 
 def rate_limiter():

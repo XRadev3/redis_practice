@@ -29,6 +29,15 @@ def check_password(username, password):
         return False
 
 
+def check_group(username):
+    """
+    Asserts if the user is in the admin group,
+    if so returns True, otherwise returns False.
+    """
+    if not get_item_field(username, 'group') == 'admin':
+        flask.abort(flask.redirect(flask.url_for('index'), 401))
+
+
 def is_logged():
     try:
         if flask.session['username']:
@@ -103,7 +112,7 @@ def get_json_from_file(key=str(), all_items=False):
     """
     key -> dict key(string)
     Returns a line from a file the holds the given key,
-    otherwise False.
+    otherwise returns False.
     """
     try:
         with open(users_file, 'r') as input_file:
@@ -126,6 +135,23 @@ def get_json_from_file(key=str(), all_items=False):
         return False
 
     return False
+
+
+def get_item_field(key, field_to_find):
+    """
+    key -> dict key (string)
+    field_to_find -> dict key(string)
+    Returns the value from the given field if successful,
+    otherwise returns False.
+    """
+    try:
+        item_data = get_json_from_file(key)
+        field_value = item_data[key][cache.item_hash_field][field_to_find]
+        return field_value
+
+    except Exception as message:
+        logging.log(40, message)
+        return False
 
 
 def get_group_info(user_data=dict(), all_groups=False):
@@ -287,4 +313,3 @@ def in_dict(item_to_check, dict_to_check, check_key=False):
 
     # If nothing is found, return False.
     return False
-
