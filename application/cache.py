@@ -9,7 +9,7 @@ import subprocess
 
 
 from functools import wraps
-from flask import session, make_response, redirect
+from flask import session, redirect
 from redis_utils import redis_utils
 
 

@@ -1,4 +1,4 @@
-{% extends "base_logged.html" %}
+{% extends "base_admin.html" %}
 
 {% block content %}
     <h1>Create User</h1>
@@ -15,10 +15,20 @@
         <p>
             {{ form.email.label }}<br>
             {{ form.email(size=32) }}
+            {% for error in form.email.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
         </p>
         <p>
             {{ form.password.label }}<br>
             {{ form.password(size=32) }}
+        </p>
+        <p>
+            {{ form.password2.label }}<br>
+            {{ form.password2(size=32) }}
+            {% for error in form.password2.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
         </p>
         <p>
             {{ form.group.label }}<br>

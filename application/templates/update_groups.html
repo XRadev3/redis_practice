@@ -1,4 +1,4 @@
-{% extends "base_logged.html"%}
+{% extends "base_admin.html" %}
 
 {% block content %}
 <head>
@@ -8,7 +8,7 @@
 <body>
     <h1>All groups</h1>
     {% if all_groups %}
-        <form action="/user/groups" method="post" novalidate>
+        <form action="/group" method="post" novalidate>
             {{ form.hidden_tag() }}
             {% if not form.validate_on_submit() %}
                 <table style="width:100%" border="1px">

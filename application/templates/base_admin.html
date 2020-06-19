@@ -1,0 +1,30 @@
+<html>
+    <head>
+        {% if title %}
+        <title>{{ title }}</title>
+        {% else %}
+        <title>Welcome to Redis Practice</title>
+        {% endif %}
+    </head>
+    <body>
+        <div>Home Page: <a href="/user/home_page">Home</a></div>
+        <div style="text-align:right; margin:0px auto 0px auto;">
+            <a href="/user/update">Update profile</a>
+            <a href="/user/delete">Delete user</a>
+            <a href="/user/create">Create user</a>
+            <a href="/group">Group management</a>
+            <a href="/logout">Logout</a>
+        </div>
+        <hr>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul class=flashes>
+                {% for message in messages %}
+                <li>{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </body>
+</html>

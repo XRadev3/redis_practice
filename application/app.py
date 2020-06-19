@@ -197,11 +197,11 @@ def update_user():
             }
 
         register_data = {username: {'attributes': user_data_dict}}
-        import pdb;pdb.set_trace()
+
         if register_data == user_hash:
             flask.flash("Nothing to change...")
-            response.status_code = 304
-            response.data = render_template(render_template("update_user.html", title=title, form=form))
+            response.status_code = 200
+            response.data = render_template("update_user.html", title=title, form=form)
             return response
 
         if auth_utils.del_json_from_file(username) and auth_utils.append_json_to_file(register_data):
@@ -223,7 +223,7 @@ def update_user():
     return response
 
 
-@app.route("/user/groups", methods=['GET', 'POST'])
+@app.route("/group", methods=['GET', 'POST'])
 def update_groups():
     form = GroupForm()
     title = "Manage groups"

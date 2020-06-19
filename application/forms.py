@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, IntegerField
+from wtforms import StringField, PasswordField, SubmitField, IntegerField, validators
 from wtforms.validators import DataRequired, EqualTo
+from wtforms.fields.html5 import EmailField
 
 
 class LoginForm(FlaskForm):
@@ -12,8 +13,9 @@ class LoginForm(FlaskForm):
 class CreateUserForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     name = StringField('Name', validators=[DataRequired()])
-    email = StringField('Email', validators=[DataRequired()])
+    email = EmailField('Email', validators=[DataRequired(), validators.Email()])
     password = PasswordField('Password', validators=[DataRequired()])
+    password2 = PasswordField('Repeat Password', validators=[DataRequired(), EqualTo('password')])
     group = StringField('Group', validators=[DataRequired()])
 
     submit = SubmitField('Create')
@@ -22,7 +24,7 @@ class CreateUserForm(FlaskForm):
 class RegisterForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     name = StringField('Name', validators=[DataRequired()])
-    email = StringField('Email', validators=[DataRequired()])
+    email = EmailField('Email', validators=[DataRequired(), validators.Email()])
     password = PasswordField('Password', validators=[DataRequired()])
     password2 = PasswordField('Repeat Password', validators=[DataRequired(), EqualTo('password')])
 
@@ -32,7 +34,7 @@ class RegisterForm(FlaskForm):
 class UpdateForm(FlaskForm):
     username = StringField('Username')
     name = StringField('Name')
-    email = StringField('Email')
+    email = EmailField('Email', validators=[validators.Email()])
     group = StringField('Group')
 
     submit_info = SubmitField('Update info')
