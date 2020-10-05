@@ -9,11 +9,12 @@ import logging
 set_name = "cache"
 key_pattern = "key*"
 hash_field = "attributes"
+log_date_format = "%b %d %X"
+log_date = datetime.datetime.now
+
 log_path = os.getcwd() + '/../cache_cleaner.log'
 logging.basicConfig(filename=log_path, level=logging.DEBUG)
-
-logging.log(logging.INFO, "LOG CLEANER INITIATED!")
-
+logging.log(logging.INFO, "{}: LOG CLEANER INITIATED!".format(log_date().strftime(log_date_format)))
 
 redis_client = redis.StrictRedis()
 
@@ -21,6 +22,7 @@ redis_client = redis.StrictRedis()
 while True:
     try:
         now = datetime.datetime.now()
+
         if not now.second:
             all_keys_in_set = redis_client.zrange(set_name, 0, -1)
             all_keys = redis_client.keys(key_pattern)
@@ -35,9 +37,9 @@ while True:
                     if key not in all_key_values:
                         redis_client.zrem(set_name, key)
                         redis_client.hdel(key.decode(), hash_field)
-                        logging.log(logging.INFO, "Cache cleaner -> {}'s data has been cleared.".format(key.decode()))
+                        logging.log(logging.INFO, "{}: Cache cleaner -> {}'s data has been cleared.".format(log_date().strftime(log_date_format), key.decode()))
 
-            logging.log(logging.INFO, "Cache sweep done. Next sweep in 60 seconds.")
+            logging.log(logging.INFO, "{}: Cache sweep done. Next sweep in 60 seconds.".format(log_date().strftime(log_date_format)))
             time.sleep(1)
 
         else:

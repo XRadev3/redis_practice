@@ -99,8 +99,8 @@ class Cache:
 
     def get_expiration_key(self, key, time_only=False):
         """
-        This function returns a active key and its expiration time.
-        If time_only is set, return the expiration time left on the key as a string.
+        This function returns an active key and its expiration time.
+        If time_only is set, returns the expiration time left on the key as a string.
         Else if it is successful, it will return they key name and expiration time as a list.
         """
         try:
@@ -119,7 +119,7 @@ class Cache:
 
     def make_key_persistent(self):
         """
-        This function makes a key persistent. In other words, removes its expiration time.
+        This function makes a key persistent.
         """
         try:
             key = self.key_prefix + session['username']
