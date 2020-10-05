@@ -8,8 +8,8 @@ import logging
 from application.config import cache
 from werkzeug.security import generate_password_hash, check_password_hash
 
-users_file = os.getcwd() + '/../application/local_storage/users.txt'
-group_file = os.getcwd() + '/../application/local_storage/groups.txt'
+users_file = os.getcwd() + '/application/local_storage/users.txt'
+group_file = os.getcwd() + '/application/local_storage/groups.txt'
 
 
 def check_password(username, password):

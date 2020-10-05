@@ -4,7 +4,7 @@ import functools
 
 from application.cache import Cache
 
-cache = Cache(os.getcwd() + '/../application/local_storage/users.txt')
+cache = Cache(os.getcwd() + '/application/local_storage/users.txt')
 
 
 @functools.lru_cache()

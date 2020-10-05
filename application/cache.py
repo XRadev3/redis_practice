@@ -33,7 +33,7 @@ class Cache:
         self.storage_file = storage_file
 
         if not self.is_cleaning:
-            path = os.getcwd() + '/../application/cache_cleaner.py'
+            path = os.getcwd() + '/application/cache_cleaner.py'
 
             subprocess.Popen(
                 ['python3', path],
