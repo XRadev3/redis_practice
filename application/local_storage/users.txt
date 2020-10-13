@@ -1,3 +1,4 @@
 {"test_user": {"attributes": {"name": "Ivan Ivanov", "email": "bbbbbbbbb", "password": "pbkdf2:sha256:150000$iFDnISRT$4a00268c0dadf50ddb7de83f280a93a4b9e55d7d1cf2357c7a400929e8bd8423", "group": "basic", "API_KEY": "WRnwpot2EBSgA4jBmRJ-4w"}}}
-
 {"xradev": {"attributes": {"name": "Hristo Radev", "email": "aasdfas@ASDA.COM", "password": "pbkdf2:sha256:150000$JrkSPFnE$559fa269bde476b599659432bcafc12a71229151248c81fa74738484aa1abd3c", "group": "admin", "API_KEY": "Gy0dCSJr1AKeavANXaGcbw"}}}
+
+{"pesho": {"attributes": {"name": "Kolio", "email": "asdf@abv.bg", "password": "pbkdf2:sha256:150000$DE9frMYu$8002483af3b42f43b02c1c5c9989bd7074b64cd02d4687b80cbecac5d8c110e7", "group": "basic", "API_KEY": "6BaQYvaEuWw2j9Nq-RTvkw"}}}

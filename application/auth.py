@@ -57,11 +57,7 @@ def increment_limiter(response):
     try:
         api_key = response.headers['API_KEY']
 
-    except w_exceptions.BadRequestKeyError:
-        username = flask.session['username']
-        api_key = auth_utils.get_api_key(username)
-
-    except KeyError:
+    except Exception as message:
         return response
 
     try:

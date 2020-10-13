@@ -4,7 +4,7 @@
 import redis
 import logging
 
-r_cli = redis.Redis("172.17.0.2", "6379")
+r_cli = redis.StrictRedis() # Redis("172.17.0.2", "6379")
 
 
 ###### HASH ######
